@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboardinho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
+<style>
+/* Onboardinho — DEMONSTRAÇÃO. Tokens do design system Modernist.
+   Botões em #d02a11 (não #ec3013) para o texto claro ter contraste 4.5:1. */
+:root {
+  --bg: #f3f2f2; --surface: #eae9e9; --text: #201e1d; --accent: #ec3013;
+  --divider: rgba(32, 30, 29, 0.4); --field: #7d7979;
+  --n200: #eae7e7; --n300: #d7d3d3; --n600: #7d7979; --n700: #605d5d; --n800: #444141;
+  --a100: #fff2ef; --a400: #ff9783; --a700: #ae1800; --a800: #7c1405;
+  --action: #d02a11; --action-hover: #ae1800;
+  --gutter: clamp(16px, 3.2vw, 40px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: "Archivo", system-ui, sans-serif; font-size: 15px; line-height: 1.55; }
+button, input { font: inherit; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.demo-bar { padding: 6px var(--gutter); background: var(--text); color: var(--bg); font-size: 12px; letter-spacing: .04em; }
+
+/* Login (design 2c) */
+.login { min-height: calc(100vh - 30px); display: flex; flex-wrap: wrap; }
+.login-form { flex: 5 1 340px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: 40px var(--gutter); border-right: 2px solid var(--divider); }
+.brand { font-weight: 800; font-size: 18px; }
+.login-block { display: flex; flex-direction: column; gap: 16px; max-width: 460px; }
+.login h1 { margin: 0 0 8px; font-size: 36px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; color: var(--n700); }
+.input { min-height: 48px; padding: 8px 12px; border: 1px solid var(--field); border-radius: 0; background: var(--surface); color: var(--text); font-size: 15px; }
+.input:focus-visible { border-color: var(--accent); outline-offset: 0; }
+.error { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--a700); }
+.note { margin: 0; font-size: 13px; color: var(--n700); }
+.btn-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 12px 18px; border: 0; border-radius: 0; background: var(--action); color: var(--bg); font-weight: 800; font-size: 15px; text-align: left; cursor: pointer; text-decoration: none; }
+.btn-primary:hover { background: var(--action-hover); }
+.btn-block { width: 100%; }
+.demo-users { font-size: 13px; padding: 12px 14px; border: 1px dashed var(--divider); }
+.demo-users ul { margin: 6px 0 0; padding-left: 18px; }
+.pitch { flex: 7 1 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 32px; padding: 40px var(--gutter); background: var(--text); color: var(--bg); }
+.pitch p { margin: 0; font-weight: 800; font-size: clamp(40px, 5.5vw, 72px); line-height: .95; letter-spacing: -0.04em; }
+.pitch dl { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 16px; border-top: 2px solid var(--accent); font-size: 14px; }
+.pitch dt { font-weight: 800; color: var(--a400); }
+.pitch dd { margin: 0; }
+
+/* App */
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 32px; padding: 16px var(--gutter); border-bottom: 2px solid var(--divider); }
+.nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 24px; flex: 1; }
+.nav button, .linklike { padding: 8px 0; border: 0; background: none; color: var(--text); font-size: 14px; cursor: pointer; }
+.nav button[aria-current="page"] { color: var(--a700); font-weight: 600; }
+.nav button:hover { color: var(--a700); }
+.who { display: flex; align-items: center; gap: 16px; padding-left: 24px; border-left: 2px solid var(--divider); font-size: 13px; }
+.linklike { color: var(--a700); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
+@media (max-width: 720px) { .nav { order: 3; flex-basis: 100%; justify-content: flex-start; } .who { padding-left: 0; border-left: 0; } }
+
+/* Início (design 2b) */
+.split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 100px); }
+.poster { flex: 5 1 360px; display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 36px var(--gutter); background: var(--action); color: var(--bg); }
+.poster-main { margin-top: auto; display: flex; flex-direction: column; gap: 20px; }
+.date { margin: 0; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.hello { margin: 0; font-weight: 800; font-size: clamp(52px, 6.5vw, 88px); line-height: .92; letter-spacing: -0.045em; }
+.headline { margin: 0; max-width: 460px; font-size: clamp(20px, 2vw, 26px); font-weight: 600; line-height: 1.2; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 16px; border-top: 2px solid var(--bg); font-size: 14px; }
+.facts dd { margin: 0; font-weight: 800; }
+.queue { flex: 7 1 520px; min-width: 0; display: flex; flex-direction: column; }
+.queue-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; padding: 28px var(--gutter) 20px; border-bottom: 2px solid var(--divider); }
+.tabs { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--field); }
+.tabs button { padding: 9px 16px; border: 0; border-radius: 0; background: none; color: var(--text); font-size: 13px; cursor: pointer; }
+.tabs button + button { border-left: 1px solid var(--field); }
+.tabs button:hover { background: var(--n200); }
+.tabs button[aria-selected="true"] { background: var(--action); color: var(--bg); font-weight: 600; }
+.muted { color: var(--n700); font-size: 13px; margin: 0; }
+.list { list-style: none; margin: 0; padding: 0 var(--gutter); flex: 1; }
+.item { display: grid; grid-template-columns: 72px minmax(0, 1fr) 160px; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--divider); }
+.item:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 640px) { .item { grid-template-columns: 48px minmax(0, 1fr); } .side { grid-column: 2; } }
+.num { font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--n600); }
+.num.first { color: var(--a700); }
+.item h2 { margin: 0 0 6px; font-size: 19px; font-weight: 800; line-height: 1.2; letter-spacing: -0.015em; }
+.item p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--n800); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag { padding: 3px 8px; font-size: 11px; }
+.tag-stage { background: var(--a100); color: var(--a800); }
+.tag-manual { background: var(--n200); color: var(--n800); }
+.tag-ai { border: 1px solid var(--field); color: var(--n800); }
+.side { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--n800); }
+.side strong { color: var(--text); }
+.late { color: var(--a700); font-weight: 600; }
+.empty { margin: 24px var(--gutter); padding: 32px 24px; border: 1px dashed var(--divider); color: var(--n700); }
+.queue-foot { padding: 16px var(--gutter); border-top: 2px solid var(--divider); }
+.btn-primary.wide { min-width: 240px; }
+
+/* Clientes */
+.page { max-width: 1280px; padding: 36px var(--gutter) 80px; display: flex; flex-direction: column; gap: 28px; }
+.kicker { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--a700); }
+.title { margin: 0; font-weight: 800; font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -0.035em; }
+.table-wrap { overflow-x: auto; border-top: 2px solid var(--text); }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
+th { padding: 10px 12px 10px 0; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; text-align: left; }
+td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); }
+</style>
+</head>
+<body>
+<div class="demo-bar">DEMONSTRAÇÃO · dados de exemplo · nada é salvo</div>
+
+<!-- Login (2c, sem SSO) -->
+<div id="screen-login" class="login">
+  <section class="login-form">
+    <span class="brand">Onboardinho</span>
+    <div class="login-block">
+      <h1>Entrar</h1>
+      <form id="login-form" class="login-block" novalidate>
+        <div class="field">
+          <label for="email">E-mail corporativo</label>
+          <input id="email" class="input" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input id="senha" class="input" type="password" autocomplete="current-password" required>
+          <p id="login-error" class="error" role="alert" hidden></p>
+        </div>
+        <button type="submit" class="btn-primary btn-block">Entrar <span aria-hidden="true">→</span></button>
+      </form>
+      <div class="demo-users">
+        <strong>Usuários de demonstração</strong> (qualquer senha):
+        <ul>
+          <li>onboarder7d@empresa.com · Onboarder 7D</li>
+          <li>onboarder8d@empresa.com · Onboarder 8D</li>
+          <li>lider@empresa.com · Liderança 6D + 7D</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Acesso para onboarders e liderança dos segmentos 6D, 7D e 8D.</p>
+  </section>
+  <section class="pitch" aria-label="Sobre o Onboardinho">
+    <p>O manual do time, no momento certo de cada cliente.</p>
+    <dl>
+      <div><dt>6D</dt><dd>Clientes N2 · N3</dd></div>
+      <div><dt>7D</dt><dd>Clientes N4 · N5</dd></div>
+      <div><dt>8D</dt><dd>Clientes N6+</dd></div>
+    </dl>
+  </section>
+</div>
+
+<!-- App -->
+<div id="screen-app" hidden>
+  <header class="topbar">
+    <span class="brand">Onboardinho</span>
+    <nav class="nav" aria-label="Principal">
+      <button type="button" data-page="inicio" aria-current="page">Início</button>
+      <button type="button" data-page="clientes" id="nav-clientes">Clientes</button>
+    </nav>
+    <div class="who"><span id="who"></span><button type="button" class="linklike" id="logout">Sair</button></div>
+  </header>
+
+  <main id="page-inicio" class="split">
+    <section class="poster" aria-labelledby="hello">
+      <div class="poster-main">
+        <p class="date" id="date"></p>
+        <h1 class="hello" id="hello"></h1>
+        <p class="headline" id="headline"></p>
+      </div>
+      <dl class="facts">
+        <div><dt id="fact-role"></dt><dd id="fact-seg"></dd></div>
+        <div><dt>Clientes</dt><dd id="fact-levels"></dd></div>
+      </dl>
+    </section>
+    <section class="queue" aria-label="Orientações priorizadas">
+      <div class="queue-head">
+        <div class="tabs" role="tablist" aria-label="Escopo" id="tabs"></div>
+        <p class="muted" id="queue-note"></p>
+      </div>
+      <ol class="list" id="list"></ol>
+      <p class="empty" id="empty" hidden></p>
+      <div class="queue-foot" id="foot">
+        <button type="button" class="btn-primary wide" id="start">Começar pelo 01 <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+  </main>
+
+  <main id="page-clientes" class="page" hidden>
+    <p class="kicker" id="clientes-kicker"></p>
+    <h1 class="title">Clientes</h1>
+    <p class="muted">Na versão final, os clientes entram por planilha (e depois pelo Astrobox).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cliente</th><th>Segmento</th><th>Responsável</th><th>Etapa</th><th>Na etapa</th></tr></thead>
+        <tbody id="clientes-body"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+// ---------- Dados de exemplo ----------
+var SEGMENTS = { "6D": "N2 · N3", "7D": "N4 · N5", "8D": "N6+" };
+var USERS = [
+  { id: "u-onb-7d", name: "Marina Costa", email: "onboarder7d@empresa.com", role: "onboarder", segments: ["7D"] },
+  { id: "u-onb-8d", name: "Rafael Lima", email: "onboarder8d@empresa.com", role: "onboarder", segments: ["8D"] },
+  { id: "u-lider", name: "Paula Reis", email: "lider@empresa.com", role: "lideranca", segments: ["6D", "7D"] }
+];
+function daysAgo(n) { return new Date(Date.now() - n * 86400000); }
+var CLIENTS = [
+  { id: "c-lumen", name: "Lumen Saúde", segment: "7D", ownerId: "u-onb-7d", stage: "Activation & Monitoring", since: daysAgo(12) },
+  { id: "c-vertice", name: "Vértice Log", segment: "7D", ownerId: "u-onb-7d", stage: "Ready for Activation", since: daysAgo(4) },
+  { id: "c-andrade", name: "Grupo Andrade", segment: "7D", ownerId: "u-onb-7d", stage: "Welcome", since: daysAgo(3) },
+  { id: "c-nobre", name: "Casa Nobre", segment: "7D", ownerId: "u-onb-7d", stage: "Pre Onboarding", since: daysAgo(1) },
+  { id: "c-orbita", name: "Órbita Pay", segment: "8D", ownerId: "u-onb-8d", stage: "Product Migration", since: daysAgo(6) },
+  { id: "c-ferraz", name: "Ferraz & Filhos", segment: "8D", ownerId: "u-onb-8d", stage: "Activation & Monitoring", since: daysAgo(2) }
+];
+var ORIENTATIONS = [
+  { scope: "cliente", clientId: "c-lumen", priority: 1, source: "ia", ref: "Manual 7D §5.1", title: "Lumen Saúde: uso caiu para 32%", text: "Abaixo de 40% na primeira quinzena. O manual pede contato com o responsável em até 48h." },
+  { scope: "cliente", clientId: "c-vertice", priority: 2, source: "ia", ref: "Manual 7D §4.3", title: "Vértice Log: go-live em 2 dias", text: "Faça o teste final com o responsável técnico e peça o aceite formal por e-mail." },
+  { scope: "cliente", clientId: "c-andrade", priority: 3, source: "lideranca", ref: "Manual 7D §2.2", title: "Grupo Andrade sem resposta há 3 dias", text: "Kit de boas-vindas enviado sem retorno. Reenvie e ligue antes de escalar." },
+  { scope: "cliente", clientId: "c-nobre", priority: 4, source: "lideranca", ref: "Manual 7D §1.1", title: "Casa Nobre: agendar o kickoff", text: "Contrato assinado ontem. Kickoff até sexta, com o responsável técnico confirmado." },
+  { scope: "cliente", clientId: "c-orbita", priority: 2, source: "ia", ref: "Manual 8D §3.4", title: "Órbita Pay: migração parada há 6 dias", text: "Confirme com o time técnico do cliente se o acesso à base antiga foi liberado." },
+  { scope: "segmento", segment: "7D", priority: 1, source: "lideranca", ref: "Manual 7D §3.2", title: "Checklist de migração v3 publicado", text: "Substitui a v2 em todos os clientes N4 e N5." },
+  { scope: "segmento", segment: "7D", priority: 2, source: "lideranca", ref: "Manual 7D §5", stage: "Activation & Monitoring", title: "Revisão semanal de Activation & Monitoring", text: "Quinta, 10h, com a liderança." },
+  { scope: "segmento", segment: "8D", priority: 1, source: "lideranca", ref: "Manual 8D §1.3", title: "Kickoff 8D sempre com sponsor executivo", text: "Sem sponsor confirmado, remarque o kickoff." },
+  { scope: "geral", priority: 1, source: "lideranca", ref: "Manual §1.4", title: "Go-live só com aceite formal por e-mail", text: "Nova regra a partir de hoje." },
+  { scope: "geral", priority: 2, source: "lideranca", ref: "Manual §2", title: "Treinamento do novo fluxo de migração", text: "Sexta, 15h · obrigatório para N2+." }
+];
+
+// ---------- Utilitários ----------
+function $(id) { return document.getElementById(id); }
+// Cria elemento com texto seguro (sem innerHTML).
+function el(tag, attrs, children) {
+  var node = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(function (k) {
+    if (k === "text") node.textContent = attrs[k];
+    else if (k === "class") node.className = attrs[k];
+    else node.setAttribute(k, attrs[k]);
+  });
+  (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+  return node;
+}
+function daysSince(date) { return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000)); }
+function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+// ---------- Estado ----------
+var state = { user: null, tab: "carteira", page: "inicio" };
+
+function visibleClients(user) {
+  return CLIENTS.filter(function (c) {
+    return user.role === "lideranca" ? user.segments.indexOf(c.segment) >= 0 : c.ownerId === user.id;
+  });
+}
+
+function buildQueue(user, tab) {
+  var mine = {};
+  visibleClients(user).forEach(function (c) { mine[c.id] = c; });
+  return ORIENTATIONS.filter(function (o) {
+    if (tab === "carteira") return o.scope === "cliente" && mine[o.clientId];
+    if (tab === "time") return o.scope === "segmento" && user.segments.indexOf(o.segment) >= 0;
+    return o.scope === "geral";
+  }).map(function (o) {
+    return Object.assign({}, o, { client: o.clientId ? mine[o.clientId] : null });
+  }).sort(function (a, b) { return a.priority - b.priority || a.title.localeCompare(b.title, "pt-BR"); });
+}
+
+function tabLabel(tab, user) {
+  if (tab === "geral") return "Geral";
+  if (tab === "time") return "Time " + user.segments.join(" + ");
+  return user.role === "lideranca" ? "Clientes do time" : "Minha carteira";
+}
+
+// ---------- Telas ----------
+function renderInicio() {
+  var user = state.user, now = new Date();
+  var hour = now.getHours();
+  var lead = user.role === "lideranca";
+  var portfolio = buildQueue(user, "carteira");
+  var needing = {};
+  portfolio.forEach(function (i) { if (i.client) needing[i.client.id] = true; });
+  var n = Object.keys(needing).length;
+
+  $("date").textContent = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  $("hello").textContent = (hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite") + ", " + user.name.split(" ")[0] + ".";
+  $("headline").textContent = n === 0
+    ? (lead ? "Nenhum cliente do time com ação hoje." : "Nenhum cliente seu precisa de ação hoje.")
+    : lead ? plural(n, "cliente do time precisa", "clientes do time precisam") + " de ação hoje."
+           : plural(n, "cliente precisa", "clientes precisam") + " de você hoje. Comece pelo 01.";
+  $("fact-role").textContent = lead ? "Liderança" : "Onboarder";
+  $("fact-seg").textContent = (user.segments.length > 1 ? "Segmentos " : "Segmento ") + user.segments.join(" + ");
+  $("fact-levels").textContent = user.segments.map(function (s) { return SEGMENTS[s]; }).join(" · ");
+
+  var tabs = $("tabs");
+  tabs.textContent = "";
+  ["carteira", "time", "geral"].forEach(function (t) {
+    var b = el("button", { type: "button", role: "tab", "aria-selected": String(t === state.tab), text: tabLabel(t, user) });
+    b.addEventListener("click", function () { state.tab = t; renderInicio(); });
+    tabs.appendChild(b);
+  });
+
+  var queue = state.tab === "carteira" ? portfolio : buildQueue(user, state.tab);
+  $("queue-note").textContent = plural(queue.length, "orientação", "orientações") + " · ordenadas por urgência";
+  var list = $("list");
+  list.textContent = "";
+  queue.forEach(function (item, i) {
+    var stage = item.client ? item.client.stage : item.stage;
+    var days = item.client ? daysSince(item.client.since) : null;
+    var side = item.client
+      ? el("div", { class: "side" }, [el("strong", { text: item.client.name }), el("span", { class: days > 10 ? "late" : "", text: plural(days, "dia", "dias") + " na etapa" })])
+      : el("div", { class: "side" }, [el("span", { text: item.segment ? "Segmento " + item.segment : "Todos os times" })]);
+    list.appendChild(el("li", { class: "item", id: "item-" + (i + 1), tabindex: "-1" }, [
+      el("span", { class: "num" + (i === 0 ? " first" : ""), "aria-hidden": "true", text: String(i + 1).padStart(2, "0") }),
+      el("div", {}, [
+        el("h2", { text: item.title }),
+        el("p", { text: item.text }),
+        el("div", { class: "tags" }, [
+          stage ? el("span", { class: "tag tag-stage", text: stage }) : null,
+          el("span", { class: "tag tag-manual", text: item.ref }),
+          item.source === "ia" ? el("span", { class: "tag tag-ai", text: "Sugestão da IA · revisar" }) : null
+        ])
+      ]),
+      side
+    ]));
+  });
+  $("empty").hidden = queue.length > 0;
+  $("empty").textContent = state.tab === "carteira" ? "Nenhuma orientação para os seus clientes agora." : "Nenhuma orientação nesta aba agora.";
+  $("foot").hidden = queue.length === 0;
+}
+
+function renderClientes() {
+  var user = state.user;
+  $("clientes-kicker").textContent = "Segmentos " + user.segments.join(" + ");
+  var names = {};
+  USERS.forEach(function (u) { names[u.id] = u.name; });
+  var body = $("clientes-body");
+  body.textContent = "";
+  visibleClients(user).forEach(function (c) {
+    var d = daysSince(c.since);
+    body.appendChild(el("tr", {}, [
+      el("td", {}, [el("strong", { text: c.name })]),
+      el("td", { text: c.segment }),
+      el("td", { text: names[c.ownerId] || "—" }),
+      el("td", { text: c.stage }),
+      el("td", { class: d > 10 ? "late" : "", text: plural(d, "dia", "dias") })
+    ]));
+  });
+}
+
+function showPage(page) {
+  state.page = page;
+  $("page-inicio").hidden = page !== "inicio";
+  $("page-clientes").hidden = page !== "clientes";
+  document.querySelectorAll(".nav button").forEach(function (b) {
+    if (b.dataset.page === page) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  if (page === "inicio") renderInicio(); else renderClientes();
+}
+
+function enterApp(user) {
+  state.user = user;
+  state.tab = "carteira";
+  $("who").textContent = user.name + " · " + (user.role === "lideranca" ? "Liderança" : "Onboarder");
+  $("nav-clientes").hidden = user.role !== "lideranca";
+  $("screen-login").hidden = true;
+  $("screen-app").hidden = false;
+  showPage("inicio");
+}
+
+// ---------- Eventos ----------
+$("login-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var email = $("email").value.trim().toLowerCase();
+  var user = USERS.filter(function (u) { return u.email === email; })[0];
+  var err = $("login-error");
+  if (!user || !$("senha").value) {
+    err.textContent = "E-mail ou senha incorretos. Use um dos usuários de demonstração.";
+    err.hidden = false;
+    return;
+  }
+  err.hidden = true;
+  enterApp(user);
+});
+$("logout").addEventListener("click", function () {
+  state.user = null;
+  $("screen-app").hidden = true;
+  $("screen-login").hidden = false;
+  $("senha").value = "";
+});
+document.querySelectorAll(".nav button").forEach(function (b) {
+  b.addEventListener("click", function () { showPage(b.dataset.page); });
+});
+$("start").addEventListener("click", function () {
+  var first = $("item-1");
+  if (first) { first.scrollIntoView({ behavior: "smooth", block: "center" }); first.focus({ preventScroll: true }); }
+});
+</script>
+</body>
+</html>
