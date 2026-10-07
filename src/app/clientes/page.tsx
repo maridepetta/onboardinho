@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { STAGES } from "@/lib/domain";
 import { CSV_COLUMNS } from "@/lib/clientImport";
@@ -11,7 +12,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { ImportForm } from "./ImportForm";
 import styles from "@/components/app/app.module.css";
 
-export const metadata: Metadata = { title: "Clientes · Assistente de Onboarding" };
+export const metadata: Metadata = { title: "Clientes · Onboardinho" };
 
 export default function ClientesPage() {
   return (
@@ -24,6 +25,7 @@ export default function ClientesPage() {
 async function Clientes() {
   const user = await requireUser();
   if (!canImportClients(user)) redirect("/inicio");
+  await connection(); // usa a data de hoje: sempre renderiza na hora do pedido
 
   const [clients, users] = await Promise.all([listClients(), listUsers()]);
   const names = new Map(users.map((u) => [u.id, u.name]));

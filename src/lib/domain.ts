@@ -16,6 +16,8 @@ export const SEGMENTS: { code: Segment; levels: string }[] = [
   { code: "8D", levels: "Clientes N6+" },
 ];
 
+export const MIN_PASSWORD = 8;
+
 export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as string[]).includes(value);
 }

@@ -9,7 +9,7 @@ import { decide } from "@/app/actions";
 import { AppShell } from "@/components/app/AppShell";
 import styles from "@/components/app/app.module.css";
 
-export const metadata: Metadata = { title: "Pedidos · Assistente de Onboarding" };
+export const metadata: Metadata = { title: "Pedidos · Onboardinho" };
 
 const STATUS_LABEL = { pendente: "PENDENTE", aprovado: "APROVADO", recusado: "RECUSADO" };
 

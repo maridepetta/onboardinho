@@ -1,3 +1,4 @@
+import { hashPassword } from "./auth";
 import type { AccessRequest, Client, Orientation, Role, Segment, User } from "./domain";
 
 // Banco SIMULADO, em memória: zera toda vez que o servidor reinicia.
@@ -5,6 +6,9 @@ import type { AccessRequest, Client, Orientation, Role, Segment, User } from "./
 
 type Db = {
   users: User[];
+  // Hash de senha por id de usuário. Fica fora de User de propósito:
+  // User vai para telas (e para o navegador); a senha nunca.
+  passwords: Map<string, string>;
   requests: AccessRequest[];
   clients: Client[];
   orientations: Orientation[];
@@ -17,9 +21,24 @@ function daysAgo(n: number) {
   return new Date(Date.now() - n * 86_400_000).toISOString();
 }
 
+// Senha de desenvolvimento dos usuários de exemplo que já fizeram o primeiro acesso.
+export const DEV_PASSWORD = "onboardinho123";
+
+// Senhas iniciais. Em desenvolvimento, DEV_PASSWORD para os usuários de exemplo.
+// Em produção NUNCA (o repositório é público): só o admin, e só se ADMIN_INITIAL_PASSWORD existir.
+function seedPasswords(): Map<string, string> {
+  if (process.env.NODE_ENV !== "production") {
+    const devHash = hashPassword(DEV_PASSWORD);
+    return new Map(["u-admin", "u-lider", "u-onb-8d"].map((id) => [id, devHash]));
+  }
+  const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+  return adminPassword ? new Map([["u-admin", hashPassword(adminPassword)]]) : new Map();
+}
+
 function seed(): Db {
   return {
     seq: 100,
+    passwords: seedPasswords(),
     users: [
       {
         id: "u-admin",
@@ -140,9 +159,21 @@ export async function createUser(input: {
   return user;
 }
 
-export async function confirmUser(id: string): Promise<void> {
+export async function findUserByEmail(email: string): Promise<User | undefined> {
+  const wanted = email.trim().toLowerCase();
+  return db.users.find((u) => u.email.toLowerCase() === wanted);
+}
+
+export async function getPasswordHash(userId: string): Promise<string | undefined> {
+  return db.passwords.get(userId);
+}
+
+// Primeiro acesso: grava a senha e marca o acesso como confirmado.
+export async function activateUser(id: string, passwordHash: string): Promise<void> {
   const user = db.users.find((u) => u.id === id);
-  if (user && !user.confirmedAt) user.confirmedAt = new Date().toISOString();
+  if (!user) return;
+  db.passwords.set(id, passwordHash);
+  if (!user.confirmedAt) user.confirmedAt = new Date().toISOString();
 }
 
 export async function listClients(): Promise<Client[]> {

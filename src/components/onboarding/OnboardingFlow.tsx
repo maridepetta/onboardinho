@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
+  MIN_PASSWORD,
   ROLES,
   ROLE_LABEL,
   SEGMENTS,
@@ -28,8 +29,6 @@ export type FlowUser = {
   grantedBy: string;
   grantedAt: string;
 };
-
-const MIN_PASSWORD = 8;
 
 export function OnboardingFlow({
   mode,
@@ -79,7 +78,11 @@ export function OnboardingFlow({
   }
 
   function confirm() {
-    startTransition(() => confirmAccess());
+    setError(null);
+    startTransition(async () => {
+      const result = await confirmAccess(password);
+      if (result?.error) setError(result.error);
+    });
   }
 
   function send() {
@@ -102,7 +105,7 @@ export function OnboardingFlow({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <span className={styles.brand}>Assistente de Onboarding</span>
+        <span className={styles.brand}>Onboardinho</span>
         <div className={styles.headerMeta}>
           <span>{mode === "primeiro-acesso" ? "Primeiro acesso" : "Meu acesso"}</span>
           <span>{user.email}</span>
@@ -256,11 +259,6 @@ export function OnboardingFlow({
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
-            {error && (
-              <p className={styles.error} role="alert">
-                {error}
-              </p>
-            )}
           </section>
         )}
 
@@ -270,6 +268,11 @@ export function OnboardingFlow({
               Enquanto o ajuste não sai, você segue com o acesso atual.
             </Heading>
           </section>
+        )}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
         )}
       </main>
 

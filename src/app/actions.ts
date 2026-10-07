@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  MIN_PASSWORD,
   isRole,
   isSegment,
   normalizeSegments,
@@ -12,31 +12,54 @@ import {
 } from "@/lib/domain";
 import { canDecide, canImportClients, canManageUsers } from "@/lib/permissions";
 import { validateImport } from "@/lib/clientImport";
-import { SESSION_COOKIE, getCurrentUser } from "@/lib/session";
+import { hashPassword, verifyPassword } from "@/lib/auth";
+import { endSession, getCurrentUser, startSession } from "@/lib/session";
 import * as store from "@/lib/store";
 
-// ---------- Sessão (simulada) ----------
+// ---------- Login ----------
 
+export type SignInState = { error?: string; email?: string } | undefined;
+
+export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const user = email ? await store.findUserByEmail(email) : undefined;
+  const hash = user ? await store.getPasswordHash(user.id) : undefined;
+  // Mesma mensagem para e-mail inexistente e senha errada: não revela quem tem conta.
+  if (!user || !verifyPassword(password, hash)) {
+    return { error: "E-mail ou senha incorretos.", email };
+  }
+  await startSession(user.id);
+  revalidatePath("/", "layout"); // descarta telas em cache de outra sessão
+  redirect("/inicio");
+}
+
+// Só em desenvolvimento: entrar como um usuário de teste sem senha
+// (inclusive quem ainda não fez o primeiro acesso, já que não há convite por e-mail).
 export async function signInAs(formData: FormData) {
+  if (process.env.NODE_ENV === "production") return;
   const id = String(formData.get("userId") ?? "");
   if (!(await store.getUser(id))) return;
-  (await cookies()).set(SESSION_COOKIE, id, { httpOnly: true, sameSite: "lax", path: "/" });
-  revalidatePath("/", "layout"); // descarta telas em cache de outra sessão
+  await startSession(id);
+  revalidatePath("/", "layout");
   redirect("/");
 }
 
 export async function signOut() {
-  (await cookies()).delete(SESSION_COOKIE);
+  await endSession();
   revalidatePath("/", "layout");
   redirect("/entrar");
 }
 
 // ---------- Primeiro acesso ----------
 
-export async function confirmAccess() {
+export async function confirmAccess(password: string): Promise<{ error: string } | void> {
   const user = await getCurrentUser();
   if (!user) redirect("/entrar");
-  await store.confirmUser(user.id);
+  if (password.length < MIN_PASSWORD) {
+    return { error: `A senha precisa de pelo menos ${MIN_PASSWORD} caracteres.` };
+  }
+  await store.activateUser(user.id, hashPassword(password));
   // Sem isso o /inicio em cache (de antes da confirmação) manda de volta ao primeiro acesso.
   revalidatePath("/", "layout");
   redirect("/inicio");

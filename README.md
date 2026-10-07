@@ -1,4 +1,4 @@
-# Assistente de Onboarding (Onboardinho)
+# Onboardinho
 
 Assistente para o time de onboarding acompanhar cada cliente com orientações e sugestões baseadas no manual do time.
 Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuários: onboarders e lideranças.
@@ -17,7 +17,7 @@ Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuário
 
 | Rota | Quem | O quê |
 | --- | --- | --- |
-| `/entrar` | todos | Login **simulado**: escolha com quem entrar |
+| `/entrar` | todos | Login com e-mail e senha (design 2c, sem SSO) |
 | `/primeiro-acesso` | quem acabou de ser criado | Criar senha → confirmar acesso (ou pedir ajuste) → início |
 | `/inicio` | todos | Design 2b: fila de orientações priorizada (Minha carteira · Time · Geral) |
 | `/clientes` | liderança e admin | Importar clientes por planilha e ver a lista |
@@ -55,10 +55,21 @@ Até a integração com o Astrobox, os clientes entram por CSV em `/clientes` (m
 
 Regras em `src/lib/clientImport.ts`, com testes.
 
+## Login
+
+- E-mail + senha. A senha é criada no primeiro acesso e guardada com hash (scrypt).
+- A sessão é um cookie httpOnly **assinado** (HMAC), válido por 12h: não dá para trocar o id no cookie e virar outra pessoa.
+- Mesma mensagem para e-mail inexistente e senha errada.
+- Variáveis de ambiente em produção:
+  - `SESSION_SECRET` (obrigatória): texto aleatório longo.
+  - `ADMIN_INITIAL_PASSWORD`: senha inicial do admin.
+- Em desenvolvimento: usuários de exemplo entram com `onboardinho123`, e há um atalho "entrar como" na tela de login (some em produção).
+
 ## O que ainda é simulado
 
 - **Banco**: `src/lib/store.ts` guarda tudo em memória e **zera quando o servidor reinicia**.
-- **Login**: `src/lib/session.ts` usa um cookie com o id do usuário escolhido em `/entrar`. A senha do primeiro acesso não é salva.
+- **Senhas e usuários** ficam em memória: reiniciar o servidor apaga as senhas criadas.
+- **Falta**: limite de tentativas de login, "esqueci minha senha" e o link de convite por e-mail.
 - **Convite por e-mail**: não é enviado.
 - **Orientações**: as de exemplo vêm do design; ainda não há tela para a liderança cadastrar nem IA gerando sugestões.
 

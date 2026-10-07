@@ -10,7 +10,7 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  title: "Assistente de Onboarding",
+  title: "Onboardinho",
   description: "Orientações do manual do time no momento certo de cada cliente",
 };
 

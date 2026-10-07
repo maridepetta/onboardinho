@@ -9,7 +9,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { CreateUserForm } from "./CreateUserForm";
 import styles from "@/components/app/app.module.css";
 
-export const metadata: Metadata = { title: "Usuários · Assistente de Onboarding" };
+export const metadata: Metadata = { title: "Usuários · Onboardinho" };
 
 export default function UsuariosPage() {
   return (

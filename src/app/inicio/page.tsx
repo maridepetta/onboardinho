@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ROLE_LABEL, SEGMENTS, describeRequest } from "@/lib/domain";
 import {
@@ -18,7 +19,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { ArrowIcon } from "@/components/icons";
 import styles from "./home.module.css";
 
-export const metadata: Metadata = { title: "Início · Assistente de Onboarding" };
+export const metadata: Metadata = { title: "Início · Onboardinho" };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -43,6 +44,7 @@ function greeting(now: Date) {
 async function Inicio({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const { aba } = await searchParams;
+  await connection(); // usa a data de hoje: sempre renderiza na hora do pedido
   const tab: Tab = isTab(aba) ? aba : "carteira";
 
   const [clients, orientations, requests] = await Promise.all([

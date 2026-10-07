@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { listRequests } from "@/lib/store";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
-export const metadata: Metadata = { title: "Primeiro acesso · Assistente de Onboarding" };
+export const metadata: Metadata = { title: "Primeiro acesso · Onboardinho" };
 
 export default function PrimeiroAcessoPage() {
   return (

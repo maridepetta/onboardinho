@@ -44,7 +44,7 @@ export async function AppShell({
     <div className={styles.shell}>
       <header className={styles.topbar}>
         <Link href="/inicio" className={styles.brand}>
-          Assistente de Onboarding
+          Onboardinho
         </Link>
         <nav aria-label="Principal" className={styles.nav}>
           {links
