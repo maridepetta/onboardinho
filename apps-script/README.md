@@ -23,8 +23,10 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
    - `Code.gs` (substitua o que existe)
    - `Regras.gs` e `Dados.gs`: botão **+ → Script**, com o nome sem o `.gs`
    - `Index.html`: botão **+ → HTML**, com o nome `Index`
-5. Salve. No topo, escolha a função **`configurar`** e clique em **Executar**. Autorize o acesso.
-   Isso cria as abas e cadastra **você como admin**.
+5. Salve. (Opcional) Escolha a função **`configurar`** e clique em **Executar** para autorizar e
+   ver o link da planilha no registro. Se pular, o app se prepara sozinho na primeira vez que
+   o link for aberto: usa a planilha ligada ao projeto ou, se o projeto foi criado em
+   script.google.com, cria uma planilha "Onboardinho – dados" no seu Drive. Quem publicou vira admin.
 6. **Implantar → Nova implantação → engrenagem → App da Web**:
    - Executar como: **Eu**
    - Quem pode acessar: **Qualquer pessoa em <sua empresa>**

@@ -9,6 +9,9 @@
 (function (global) {
   function createGoogleFakes(opts) {
     var state = { email: (opts && opts.email) || '', owner: (opts && opts.owner) || 'dona@empresa.com' };
+    // standalone: projeto criado em script.google.com (sem planilha ligada).
+    var standalone = !!(opts && opts.standalone);
+    var created = 0;
     var sheets = {};
     var props = {};
     var seq = 0;
@@ -62,6 +65,7 @@
 
     var ss = {
       getId: function () { return 'planilha-teste'; },
+      getUrl: function () { return 'https://docs.google.com/spreadsheets/d/planilha-teste'; },
       getSheetByName: function (n) { return sheets[n] || null; },
       insertSheet: function (n) { sheets[n] = new Sheet(); return sheets[n]; }
     };
@@ -69,7 +73,8 @@
     var services = {
       SpreadsheetApp: {
         openById: function () { return ss; },
-        getActiveSpreadsheet: function () { return ss; }
+        getActiveSpreadsheet: function () { return standalone ? null : ss; },
+        create: function () { created += 1; return ss; }
       },
       PropertiesService: {
         getScriptProperties: function () {
@@ -87,6 +92,7 @@
         getScriptLock: function () { return { waitLock: function () {}, releaseLock: function () {} }; }
       },
       Utilities: { getUuid: function () { seq += 1; return 'id-' + seq; } },
+      Logger: { log: function () {} },
       HtmlService: {
         createHtmlOutputFromFile: function () {
           var out = { setTitle: function () { return out; }, addMetaTag: function () { return out; } };
@@ -99,6 +105,7 @@
       services: services,
       sheets: sheets,
       setEmail: function (e) { state.email = e; },
+      createdCount: function () { return created; },
       // Cola linhas numa aba como se fosse o admin colando a exportação.
       paste: function (name, rows) { rows.forEach(function (r) { sheets[name].appendRow(r); }); },
       values: function (name) { return sheets[name].getDataRange().getValues(); }

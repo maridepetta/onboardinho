@@ -13,10 +13,48 @@ var ABAS = {
 
 var PROP_PLANILHA = 'PLANILHA_ID';
 
+var NOME_PLANILHA = 'Onboardinho – dados';
+
+/**
+ * A planilha do app. Na primeira vez, prepara sozinha: usa a planilha onde o script foi
+ * criado (Extensões → Apps Script) ou, se o projeto foi criado em script.google.com,
+ * cria uma planilha nova no Drive de quem publicou. Não precisa rodar nada no editor.
+ */
 function planilha_() {
-  var id = PropertiesService.getScriptProperties().getProperty(PROP_PLANILHA);
-  if (!id) throw new Error('App não configurado: rode a função "configurar" no editor do Apps Script.');
-  return SpreadsheetApp.openById(id);
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty(PROP_PLANILHA);
+  if (id) return SpreadsheetApp.openById(id);
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create(NOME_PLANILHA);
+  props.setProperty(PROP_PLANILHA, ss.getId());
+  prepararAbas_(ss);
+  cadastrarDonaComoAdmin_();
+  return ss;
+}
+
+function prepararAbas_(ss) {
+  Object.keys(ABAS).forEach(function (nome) {
+    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
+    if (sh.getLastRow() === 0) {
+      sh.getRange(1, 1, 1, ABAS[nome].length).setValues([ABAS[nome]]).setFontWeight('bold');
+      sh.setFrozenRows(1);
+    }
+  });
+}
+
+/** Quem publicou o app (o script roda como essa pessoa) vira admin, se ainda não estiver cadastrada. */
+function cadastrarDonaComoAdmin_() {
+  var eu = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  if (!eu || lerUsuarios_().some(function (u) { return u.email === eu; })) return;
+  var agora = new Date().toISOString();
+  inserir_('Usuarios', {
+    email: eu, nome: eu.split('@')[0], papel: 'lideranca', segmentos: '6D, 7D, 8D', admin: true,
+    liberado_por: 'configuração inicial', liberado_em: agora, confirmado_em: agora
+  });
+}
+
+/** Link da planilha (para o admin abrir pelo app). */
+function urlPlanilha_() {
+  return planilha_().getUrl();
 }
 
 function aba_(nome) {
@@ -183,34 +221,17 @@ function lerPedidos_() {
   }).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; });
 }
 
-// ---------- Configuração inicial (rodar uma vez no editor) ----------
+// ---------- Configuração (opcional) ----------
 
 /**
- * Cria as abas com cabeçalho na planilha onde o script está (ou na indicada) e
- * cadastra você como admin. Rode pelo editor: selecione "configurar" e clique em Executar.
+ * Opcional: rode pelo editor para preparar tudo e ver o link da planilha no registro.
+ * O app também se prepara sozinho na primeira vez que alguém abre o link.
  */
 function configurar() {
-  var props = PropertiesService.getScriptProperties();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Abra o editor pela planilha (Extensões → Apps Script) e rode de novo.');
-  props.setProperty(PROP_PLANILHA, ss.getId());
-
-  Object.keys(ABAS).forEach(function (nome) {
-    var sh = ss.getSheetByName(nome) || ss.insertSheet(nome);
-    if (sh.getLastRow() === 0) {
-      sh.getRange(1, 1, 1, ABAS[nome].length).setValues([ABAS[nome]]).setFontWeight('bold');
-      sh.setFrozenRows(1);
-    }
-  });
-
-  var eu = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
-  var jaExiste = lerUsuarios_().some(function (u) { return u.email === eu; });
-  if (eu && !jaExiste) {
-    var agora = new Date().toISOString();
-    inserir_('Usuarios', {
-      email: eu, nome: eu.split('@')[0], papel: 'lideranca', segmentos: '6D, 7D, 8D', admin: true,
-      liberado_por: 'configuração inicial', liberado_em: agora, confirmado_em: agora
-    });
-  }
-  return 'Pronto. Admin: ' + eu;
+  var ss = planilha_();
+  prepararAbas_(ss);
+  cadastrarDonaComoAdmin_();
+  var msg = 'Pronto. Planilha: ' + ss.getUrl() + ' · Admin: ' + Session.getEffectiveUser().getEmail();
+  Logger.log(msg);
+  return msg;
 }

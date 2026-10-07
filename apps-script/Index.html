@@ -459,7 +459,8 @@ function paginaClientes() {
       el('h1', { class: 'title', text: 'Clientes' }),
       el('p', { class: 'lead', text: S.eu.admin
         ? 'Os clientes vêm da aba "Clientes" da planilha. Cole a exportação lá com as colunas id_externo, nome, segmento, responsavel_email, etapa e desde (dd/mm/aaaa).'
-        : 'Clientes dos seus segmentos. A lista é atualizada pelo admin.' })
+        : 'Clientes dos seus segmentos. A lista é atualizada pelo admin.' }),
+      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
     ]),
     S.avisosClientes && S.avisosClientes.length ? el('div', { class: 'notice' }, [
       el('strong', { text: plural(S.avisosClientes.length, 'cliente precisa', 'clientes precisam') + ' de novo responsável:' }),
@@ -571,7 +572,8 @@ function paginaUsuarios() {
     el('div', { class: 'stack' }, [
       el('p', { class: 'kicker', text: 'Admin' }),
       el('h1', { class: 'title', text: 'Usuários' }),
-      el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha.' })
+      el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha.' }),
+      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
     ]),
     el('form', { class: 'form panel', onsubmit: function (e) {
       e.preventDefault();

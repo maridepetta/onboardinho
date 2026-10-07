@@ -87,7 +87,8 @@ function apiEstado() {
     historico: historico.slice(0, 50).map(semLinha_),
     usuarios: podeGerenciarUsuarios_(eu) ? usuarios.map(semLinha_) : [],
     problemasClientes: eu.admin ? lidos.problemas : [],
-    avisosClientes: eu.admin ? lidos.avisos : []
+    avisosClientes: eu.admin ? lidos.avisos : [],
+    planilhaUrl: eu.admin ? urlPlanilha_() : ''
   };
 }
 

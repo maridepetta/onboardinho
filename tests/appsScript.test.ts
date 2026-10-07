@@ -18,8 +18,8 @@ const DONA = "dona@empresa.com";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type App = any;
 
-function novoApp() {
-  const fakes = createGoogleFakes({ owner: DONA, email: DONA });
+function novoApp(opts: { standalone?: boolean; semConfigurar?: boolean } = {}) {
+  const fakes = createGoogleFakes({ owner: DONA, email: DONA, standalone: opts.standalone });
   const ctx = vm.createContext({ ...fakes.services });
   GS.forEach((code) => vm.runInContext(code, ctx));
   // Como o google.script.run: tudo que volta para a tela passa por JSON.
@@ -31,7 +31,7 @@ function novoApp() {
       return typeof value === "function" ? (...args: unknown[]) => plain(value(...args)) : value;
     },
   });
-  app.configurar();
+  if (!opts.semConfigurar) app.configurar();
   return { app, fakes, como: (email: string) => fakes.setEmail(email) };
 }
 
@@ -60,6 +60,24 @@ test("configurar cria as abas e cadastra quem rodou como admin", () => {
   assert.equal(estado.eu.admin, true);
   app.configurar(); // rodar de novo não duplica
   assert.equal(fakes.values("Usuarios").length, 2);
+});
+
+test("abrir o link sem ter rodado configurar: o app se prepara sozinho", () => {
+  for (const standalone of [false, true]) {
+    const { app, fakes, como } = novoApp({ standalone, semConfigurar: true });
+    como("alguem@empresa.com"); // até a primeira visita de outra pessoa prepara tudo
+    assert.equal(app.apiEstado().tela, "sem-acesso");
+    como(DONA);
+    const estado = app.apiEstado();
+    assert.equal(estado.tela, "app");
+    assert.equal(estado.eu.admin, true);
+    assert.match(estado.planilhaUrl, /^https:\/\/docs.google.com\//);
+    assert.equal(fakes.createdCount(), standalone ? 1 : 0); // cria planilha só se não houver uma ligada
+    app.apiEstado();
+    assert.equal(fakes.createdCount(), standalone ? 1 : 0); // e só uma vez
+    como("lider@empresa.com");
+    assert.ok(!app.apiEstado().planilhaUrl); // link da planilha: só admin
+  }
 });
 
 test("sem conta Google identificada, ou fora da aba Usuarios: sem acesso", () => {
