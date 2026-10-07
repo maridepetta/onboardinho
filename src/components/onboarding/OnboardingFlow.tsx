@@ -6,6 +6,7 @@ import {
   ROLES,
   ROLE_LABEL,
   SEGMENTS,
+  validateGrant,
   type RequestKind,
   type Role,
   type Segment,
@@ -54,13 +55,27 @@ export function OnboardingFlow({
   const firstName = user.name.split(" ")[0];
   const grantedAt = new Date(user.grantedAt).toLocaleDateString("pt-BR");
   const passwordOk = password.length >= MIN_PASSWORD && password === password2;
-  const segmentsChanged = wantedSegments.join() !== user.segments.join();
-  const canSend = kind === "papel" ? wantedRole !== user.role : wantedSegments.length > 0 && segmentsChanged;
+  // Papel que valeria depois do ajuste: define se a escolha de segmento é única (onboarder).
+  const targetRole = kind === "papel" ? wantedRole : user.role;
+  const singleSegment = targetRole === "onboarder";
+  // Virar onboarder tendo vários segmentos: precisa escolher com qual fica.
+  const pickSegmentForRole = kind === "papel" && singleSegment && user.segments.length > 1;
+  const sentSegments = kind === "papel" && !pickSegmentForRole ? user.segments : wantedSegments;
+  const changed =
+    kind === "papel" ? wantedRole !== user.role : wantedSegments.join() !== user.segments.join();
+  const canSend = changed && validateGrant(targetRole, sentSegments) === null;
 
   function toggleSegment(code: Segment) {
     setWantedSegments((cur) =>
-      SEGMENTS.map((s) => s.code).filter((c) => (c === code ? !cur.includes(c) : cur.includes(c))),
+      singleSegment
+        ? [code]
+        : SEGMENTS.map((s) => s.code).filter((c) => (c === code ? !cur.includes(c) : cur.includes(c))),
     );
+  }
+
+  function chooseKind(next: RequestKind) {
+    setKind(next);
+    setWantedSegments(user.segments);
   }
 
   function confirm() {
@@ -73,7 +88,7 @@ export function OnboardingFlow({
       const result = await requestChange({
         kind,
         role: wantedRole,
-        segments: wantedSegments,
+        segments: sentSegments,
         note,
       });
       if (result.ok) setScreen("sent");
@@ -185,41 +200,49 @@ export function OnboardingFlow({
           <section className={styles.block}>
             <Heading kicker="Pedir ajuste" title="O que está diferente?" />
             <div className={styles.choiceGrid} role="group" aria-label="O que mudar">
-              <Tile on={kind === "segmentacao"} k="A" onClick={() => setKind("segmentacao")}>
+              <Tile on={kind === "segmentacao"} k="A" onClick={() => chooseKind("segmentacao")}>
                 Segmentação
               </Tile>
-              <Tile on={kind === "papel"} k="B" onClick={() => setKind("papel")}>
+              <Tile on={kind === "papel"} k="B" onClick={() => chooseKind("papel")}>
                 Papel
               </Tile>
             </div>
 
             {kind === "segmentacao" ? (
-              <fieldset className={styles.fieldset}>
-                <legend>Quais segmentações você deveria ter?</legend>
-                <div className={styles.choiceGrid}>
-                  {SEGMENTS.map((s) => (
-                    <Tile
-                      key={s.code}
-                      on={wantedSegments.includes(s.code)}
-                      k={s.code}
-                      onClick={() => toggleSegment(s.code)}
-                    >
-                      {s.levels}
-                    </Tile>
-                  ))}
-                </div>
-              </fieldset>
+              <SegmentPicker
+                legend={
+                  singleSegment
+                    ? "Qual deveria ser a sua segmentação? (onboarder tem uma)"
+                    : "Quais segmentações você deveria ter?"
+                }
+                selected={wantedSegments}
+                onToggle={toggleSegment}
+              />
             ) : (
-              <fieldset className={styles.fieldset}>
-                <legend>Qual deveria ser o seu papel?</legend>
-                <div className={styles.choiceGrid}>
-                  {ROLES.map((r) => (
-                    <Tile key={r} on={wantedRole === r} k={r === user.role ? "Atual" : "Novo"} onClick={() => setWantedRole(r)}>
-                      {ROLE_LABEL[r]}
-                    </Tile>
-                  ))}
-                </div>
-              </fieldset>
+              <>
+                <fieldset className={styles.fieldset}>
+                  <legend>Qual deveria ser o seu papel?</legend>
+                  <div className={styles.choiceGrid}>
+                    {ROLES.map((r) => (
+                      <Tile
+                        key={r}
+                        on={wantedRole === r}
+                        k={r === user.role ? "Atual" : "Novo"}
+                        onClick={() => setWantedRole(r)}
+                      >
+                        {ROLE_LABEL[r]}
+                      </Tile>
+                    ))}
+                  </div>
+                </fieldset>
+                {pickSegmentForRole && (
+                  <SegmentPicker
+                    legend="Como onboarder, com qual segmentação você fica?"
+                    selected={wantedSegments.length === 1 ? wantedSegments : []}
+                    onToggle={toggleSegment}
+                  />
+                )}
+              </>
             )}
 
             <div className={styles.field}>
@@ -312,6 +335,29 @@ function Heading({
       <h1 className={styles.title}>{title}</h1>
       {children && <p className={styles.lead}>{children}</p>}
     </div>
+  );
+}
+
+function SegmentPicker({
+  legend,
+  selected,
+  onToggle,
+}: {
+  legend: string;
+  selected: Segment[];
+  onToggle: (code: Segment) => void;
+}) {
+  return (
+    <fieldset className={styles.fieldset}>
+      <legend>{legend}</legend>
+      <div className={styles.choiceGrid}>
+        {SEGMENTS.map((s) => (
+          <Tile key={s.code} on={selected.includes(s.code)} k={s.code} onClick={() => onToggle(s.code)}>
+            {s.levels}
+          </Tile>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

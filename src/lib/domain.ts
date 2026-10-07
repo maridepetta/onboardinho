@@ -29,9 +29,20 @@ export function normalizeSegments(values: unknown[]): Segment[] {
   return SEGMENTS.map((s) => s.code).filter((code) => values.includes(code));
 }
 
+// Regra de acesso: onboarder tem exatamente 1 segmento; liderança, 1 ou mais.
+// Devolve a mensagem de erro, ou null se a combinação é válida.
+export function validateGrant(role: Role, segments: Segment[]): string | null {
+  if (segments.length === 0) return "Escolha ao menos uma segmentação.";
+  if (role === "onboarder" && segments.length !== 1) return "Onboarder tem uma segmentação só.";
+  return null;
+}
+
 export function describeRequest(request: Pick<AccessRequest, "kind" | "role" | "segments">): string {
-  if (request.kind === "papel" && request.role) return `Papel → ${ROLE_LABEL[request.role]}`;
-  return `Segmentação → ${(request.segments ?? []).join(" + ")}`;
+  const segs = (request.segments ?? []).join(" + ");
+  if (request.kind === "papel" && request.role) {
+    return `Papel → ${ROLE_LABEL[request.role]}${segs ? ` (${segs})` : ""}`;
+  }
+  return `Segmentação → ${segs}`;
 }
 
 export type User = {
@@ -54,11 +65,54 @@ export type AccessRequest = {
   userId: string;
   kind: RequestKind;
   role?: Role; // papel pedido (kind = papel)
-  segments?: Segment[]; // segmentações pedidas (kind = segmentacao)
+  segments?: Segment[]; // segmentações pedidas; em mudança de papel, as que valem com o papel novo
   note: string;
   status: RequestStatus;
   createdAt: string;
   decidedBy?: string; // nome, para exibir
   decidedById?: string;
   decidedAt?: string;
+};
+
+// ---------- Clientes e orientações ----------
+
+export const STAGES = [
+  "Pre Onboarding",
+  "Welcome",
+  "Product Migration",
+  "Ready for Activation",
+  "Activation & Monitoring",
+  "Accomplished",
+  "Unaccomplished",
+] as const;
+export type Stage = (typeof STAGES)[number];
+
+export type Client = {
+  id: string;
+  externalId?: string; // id no sistema de origem (planilha / Astrobox)
+  name: string;
+  segment: Segment;
+  ownerId: string; // onboarder responsável
+  stage: Stage;
+  stageSince: string; // ISO — base para "dias na etapa"
+};
+
+// Orientação baseada no manual.
+// - geral: vale para todos os times
+// - segmento: vale para um segmento
+// - cliente: ação concreta para um cliente
+// `source` diz quem criou: a liderança (a partir do manual) ou uma sugestão da IA.
+export type OrientationScope = "geral" | "segmento" | "cliente";
+
+export type Orientation = {
+  id: string;
+  title: string;
+  description: string;
+  scope: OrientationScope;
+  segment?: Segment; // scope = segmento
+  clientId?: string; // scope = cliente
+  stage?: Stage;
+  manualRef: string; // ex.: "Manual 7D §5.1"
+  priority: number; // 1 = mais urgente
+  source: "lideranca" | "ia";
 };

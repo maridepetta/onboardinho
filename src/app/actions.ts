@@ -3,8 +3,15 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isRole, isSegment, normalizeSegments, type RequestKind } from "@/lib/domain";
-import { canDecide, canManageUsers } from "@/lib/permissions";
+import {
+  isRole,
+  isSegment,
+  normalizeSegments,
+  validateGrant,
+  type RequestKind,
+} from "@/lib/domain";
+import { canDecide, canImportClients, canManageUsers } from "@/lib/permissions";
+import { validateImport } from "@/lib/clientImport";
 import { SESSION_COOKIE, getCurrentUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -55,21 +62,32 @@ export async function requestChange(
 
   const note = input.note.trim().slice(0, 500);
 
+  const wantedSegments = normalizeSegments((input.segments ?? []).filter(isSegment));
+
   if (input.kind === "papel") {
     if (!isRole(input.role) || input.role === user.role) {
       return { ok: false, error: "Escolha um papel diferente do atual." };
     }
-    await store.createRequest({ userId: user.id, kind: "papel", role: input.role, note });
+    // Com o papel novo, as segmentações precisam continuar válidas (onboarder: só 1).
+    const segments = wantedSegments.length ? wantedSegments : user.segments;
+    const invalid = validateGrant(input.role, segments);
+    if (invalid) return { ok: false, error: invalid };
+    await store.createRequest({ userId: user.id, kind: "papel", role: input.role, segments, note });
     return { ok: true };
   }
 
   if (input.kind === "segmentacao") {
-    const segments = normalizeSegments((input.segments ?? []).filter(isSegment));
-    if (segments.length === 0) return { ok: false, error: "Escolha ao menos uma segmentação." };
-    if (segments.join() === user.segments.join()) {
+    const invalid = validateGrant(user.role, wantedSegments);
+    if (invalid) return { ok: false, error: invalid };
+    if (wantedSegments.join() === user.segments.join()) {
       return { ok: false, error: "Essas já são as suas segmentações." };
     }
-    await store.createRequest({ userId: user.id, kind: "segmentacao", segments, note });
+    await store.createRequest({
+      userId: user.id,
+      kind: "segmentacao",
+      segments: wantedSegments,
+      note,
+    });
     return { ok: true };
   }
 
@@ -124,7 +142,8 @@ export async function createUser(
   if (!values.name) return fail("Informe o nome.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) return fail("E-mail inválido.");
   if (!isRole(role)) return fail("Escolha o papel.");
-  if (segments.length === 0) return fail("Escolha ao menos uma segmentação.");
+  const invalid = validateGrant(role, segments);
+  if (invalid) return fail(invalid);
 
   try {
     await store.createUser({
@@ -141,4 +160,31 @@ export async function createUser(
   revalidatePath("/", "layout");
   // TODO: com o Supabase, aqui sai o convite por e-mail para a pessoa criar a senha.
   return { created: values.name, attempt };
+}
+
+// ---------- Clientes (planilha) ----------
+
+const MAX_CSV_BYTES = 1_000_000;
+
+export type ImportState =
+  | { errors?: string[]; created?: number; updated?: number; attempt: number }
+  | undefined;
+
+export async function importClients(_prev: ImportState, formData: FormData): Promise<ImportState> {
+  const attempt = (_prev?.attempt ?? 0) + 1;
+  const user = await getCurrentUser();
+  if (!user || !canImportClients(user)) {
+    return { errors: ["Só admin e liderança importam clientes."], attempt };
+  }
+
+  const file = formData.get("arquivo");
+  if (!(file instanceof File) || file.size === 0) return { errors: ["Escolha um arquivo .csv."], attempt };
+  if (file.size > MAX_CSV_BYTES) return { errors: ["Arquivo maior que 1 MB."], attempt };
+
+  const { rows, errors } = validateImport(await file.text(), await store.listUsers(), user);
+  if (errors.length) return { errors, attempt };
+
+  const { created, updated } = await store.upsertClients(rows);
+  revalidatePath("/", "layout");
+  return { created, updated, attempt };
 }

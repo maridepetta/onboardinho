@@ -7,6 +7,11 @@ export function canManageUsers(user: User): boolean {
   return user.isAdmin;
 }
 
+// Importar clientes por planilha: admin (todos os segmentos) e liderança (só os seus).
+export function canImportClients(user: User): boolean {
+  return user.isAdmin || user.role === "lideranca";
+}
+
 export function canReviewRequests(user: User): boolean {
   return user.isAdmin || user.role === "lideranca";
 }

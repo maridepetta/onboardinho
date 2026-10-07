@@ -1,19 +1,26 @@
 import Link from "next/link";
 import { ROLE_LABEL, type User } from "@/lib/domain";
-import { canDecide, canManageUsers, canReviewRequests } from "@/lib/permissions";
+import {
+  canDecide,
+  canImportClients,
+  canManageUsers,
+  canReviewRequests,
+} from "@/lib/permissions";
 import { listRequests } from "@/lib/store";
 import { signOut } from "@/app/actions";
 import styles from "./app.module.css";
 
-type Section = "inicio" | "meu-acesso" | "pedidos" | "usuarios";
+type Section = "inicio" | "clientes" | "meu-acesso" | "pedidos" | "usuarios";
 
 export async function AppShell({
   user,
   current,
+  bleed = false,
   children,
 }: {
   user: User;
   current: Section;
+  bleed?: boolean; // true: conteúdo ocupa a largura toda (página inicial)
   children: React.ReactNode;
 }) {
   const toDecide = canReviewRequests(user)
@@ -22,6 +29,7 @@ export async function AppShell({
 
   const links: { id: Section; href: string; label: string; show: boolean }[] = [
     { id: "inicio", href: "/inicio", label: "Início", show: true },
+    { id: "clientes", href: "/clientes", label: "Clientes", show: canImportClients(user) },
     { id: "meu-acesso", href: "/meu-acesso", label: "Meu acesso", show: true },
     {
       id: "pedidos",
@@ -61,7 +69,7 @@ export async function AppShell({
           </button>
         </form>
       </header>
-      <main className={styles.content}>{children}</main>
+      <main className={bleed ? styles.bleed : styles.content}>{children}</main>
     </div>
   );
 }

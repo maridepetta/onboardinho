@@ -1,9 +1,10 @@
 // Regras de quem decide pedidos. Rodar: npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canDecide, canManageUsers, canReviewRequests } from "../src/lib/permissions.ts";
+import { canDecide, canManageUsers, canReviewRequests } from "../src/lib/permissions";
+import type { AccessRequest, User } from "../src/lib/domain";
 
-const user = (over) => ({
+const user = (over: Partial<User>): User => ({
   id: "u",
   name: "U",
   email: "u@x.com",
@@ -16,7 +17,7 @@ const user = (over) => ({
   ...over,
 });
 
-const request = (over) => ({
+const request = (over: Partial<AccessRequest>): AccessRequest => ({
   id: "r",
   userId: "alvo",
   kind: "segmentacao",

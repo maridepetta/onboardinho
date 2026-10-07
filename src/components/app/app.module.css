@@ -98,6 +98,12 @@
   gap: 36px;
 }
 
+.bleed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Tipografia */
 
 .kicker {
@@ -389,4 +395,19 @@
 .userButton:hover {
   border-top-color: var(--color-accent);
   background: var(--color-neutral-200);
+}
+
+.errorTitle {
+  margin: 0 0 6px;
+}
+
+.errorList {
+  margin: 0;
+  padding-left: 18px;
+  font-weight: 400;
+}
+
+.late {
+  color: var(--color-accent-700);
+  font-weight: 600;
 }

@@ -19,7 +19,8 @@ Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuário
 | --- | --- | --- |
 | `/entrar` | todos | Login **simulado**: escolha com quem entrar |
 | `/primeiro-acesso` | quem acabou de ser criado | Criar senha → confirmar acesso (ou pedir ajuste) → início |
-| `/inicio` | todos | Página da pessoa (lista de clientes ainda por fazer) |
+| `/inicio` | todos | Design 2b: fila de orientações priorizada (Minha carteira · Time · Geral) |
+| `/clientes` | liderança e admin | Importar clientes por planilha e ver a lista |
 | `/meu-acesso` | todos | Ver o acesso e pedir ajuste |
 | `/pedidos` | liderança e admin | Aprovar/recusar pedidos |
 | `/admin/usuarios` | admin | Criar usuários |
@@ -36,15 +37,30 @@ Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuário
 ```bash
 npm install
 npm run dev   # http://localhost:3000
-npm test      # regras de permissão
+npm test      # permissões, regra de segmento, fila e importação
 npm run lint
 ```
+
+## Clientes por planilha
+
+Até a integração com o Astrobox, os clientes entram por CSV em `/clientes` (modelo em `/clientes/modelo`):
+
+`id_externo ; nome ; segmento ; responsavel_email ; etapa ; desde`
+
+- Separador `;` ou `,`; datas `dd/mm/aaaa`; etapa e segmento sem diferenciar maiúsculas/acentos.
+- Tudo ou nada: se uma linha tiver erro, nada é importado e cada erro diz a linha.
+- Cria os novos e atualiza os existentes (por `id_externo`, ou nome + segmento). Ninguém é apagado.
+- Liderança só importa clientes dos próprios segmentos.
+- **Use o id do Astrobox em `id_externo`**: é a chave que vai permitir trocar a planilha pela integração sem duplicar clientes.
+
+Regras em `src/lib/clientImport.ts`, com testes.
 
 ## O que ainda é simulado
 
 - **Banco**: `src/lib/store.ts` guarda tudo em memória e **zera quando o servidor reinicia**.
 - **Login**: `src/lib/session.ts` usa um cookie com o id do usuário escolhido em `/entrar`. A senha do primeiro acesso não é salva.
 - **Convite por e-mail**: não é enviado.
+- **Orientações**: as de exemplo vêm do design; ainda não há tela para a liderança cadastrar nem IA gerando sugestões.
 
 Plano: trocar os três pelo [Supabase](https://supabase.com) (banco Postgres + login por e-mail/senha + convite pelo admin).
 As telas não mudam; só `store.ts` e `session.ts`.
