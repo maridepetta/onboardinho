@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<base target="_top">
 <title>Onboardinho</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
 <style>
-/* Onboardinho — DEMONSTRAÇÃO. Tokens do design system Modernist.
-   Botões em #d02a11 (não #ec3013) para o texto claro ter contraste 4.5:1. */
+/* Tokens do design system Modernist. Botões em #d02a11 (não #ec3013) para o texto claro ter contraste 4.5:1. */
 :root {
   --bg: #f3f2f2; --surface: #eae9e9; --text: #201e1d; --accent: #ec3013;
   --divider: rgba(32, 30, 29, 0.4); --field: #7d7979;
@@ -20,52 +20,77 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--text); font-family: "Archivo", system-ui, sans-serif; font-size: 15px; line-height: 1.55; }
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
 
-.demo-bar { padding: 6px var(--gutter); background: var(--text); color: var(--bg); font-size: 12px; letter-spacing: .04em; }
-
-/* Login (design 2c) */
-.login { min-height: calc(100vh - 30px); display: flex; flex-wrap: wrap; }
-.login-form { flex: 5 1 340px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: 40px var(--gutter); border-right: 2px solid var(--divider); }
 .brand { font-weight: 800; font-size: 18px; }
-.login-block { display: flex; flex-direction: column; gap: 16px; max-width: 460px; }
-.login h1 { margin: 0 0 8px; font-size: 36px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field label { font-size: 12px; color: var(--n700); }
-.input { min-height: 48px; padding: 8px 12px; border: 1px solid var(--field); border-radius: 0; background: var(--surface); color: var(--text); font-size: 15px; }
-.input:focus-visible { border-color: var(--accent); outline-offset: 0; }
-.error { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--a700); }
-.note { margin: 0; font-size: 13px; color: var(--n700); }
-.btn-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 12px 18px; border: 0; border-radius: 0; background: var(--action); color: var(--bg); font-weight: 800; font-size: 15px; text-align: left; cursor: pointer; text-decoration: none; }
+.kicker { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--a700); }
+.title { margin: 0; font-weight: 800; font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -0.035em; }
+.big { margin: 0; font-weight: 800; font-size: clamp(44px, 6.5vw, 88px); line-height: .95; letter-spacing: -0.045em; }
+.lead { margin: 0; max-width: 640px; font-size: 16px; color: var(--n800); }
+.muted { margin: 0; color: var(--n700); font-size: 13px; }
+.h2 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 16px; border-radius: 0; font-weight: 800; font-size: 14px; text-align: left; cursor: pointer; }
+.btn-primary { border: 0; background: var(--action); color: var(--bg); }
 .btn-primary:hover { background: var(--action-hover); }
-.btn-block { width: 100%; }
-.demo-users { font-size: 13px; padding: 12px 14px; border: 1px dashed var(--divider); }
-.demo-users ul { margin: 6px 0 0; padding-left: 18px; }
-.pitch { flex: 7 1 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 32px; padding: 40px var(--gutter); background: var(--text); color: var(--bg); }
-.pitch p { margin: 0; font-weight: 800; font-size: clamp(40px, 5.5vw, 72px); line-height: .95; letter-spacing: -0.04em; }
-.pitch dl { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 16px; border-top: 2px solid var(--accent); font-size: 14px; }
-.pitch dt { font-weight: 800; color: var(--a400); }
-.pitch dd { margin: 0; }
+.btn-secondary { border: 1px solid var(--field); background: transparent; color: var(--text); }
+.btn-secondary:hover { background: var(--n200); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-wide { min-width: 240px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label, legend { font-size: 12px; color: var(--n700); }
+.input { min-height: 44px; padding: 6px 10px; border: 1px solid var(--field); border-radius: 0; background: var(--surface); color: var(--text); font-size: 14px; }
+.input:focus-visible { border-color: var(--accent); outline-offset: 0; }
+textarea.input { min-height: 80px; resize: vertical; }
+fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+legend { margin-bottom: 6px; padding: 0; }
+.check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--action); }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; }
+.full { grid-column: 1 / -1; }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: min(560px, calc(100% - 32px)); padding: 12px 16px; background: var(--text); color: var(--bg); font-weight: 600; z-index: 10; }
+.toast.erro { background: var(--a700); }
+.notice { margin: 0; padding: 12px 16px; border-left: 4px solid var(--text); background: var(--surface); font-size: 14px; }
+.warn { margin: 0; padding: 12px 16px; background: var(--a100); color: var(--a700); font-size: 14px; }
+.empty { margin: 0; padding: 32px 24px; border: 1px dashed var(--divider); color: var(--n700); }
+
+/* Telas cheias (carregando, sem acesso, primeiro acesso) */
+.full-screen { min-height: 100vh; display: flex; flex-direction: column; }
+.full-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px var(--gutter); border-bottom: 2px solid var(--divider); font-size: 13px; }
+.full-main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; max-width: 1180px; padding: 48px var(--gutter); }
+.full-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px var(--gutter); border-top: 2px solid var(--divider); }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px; }
+.card { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-height: 180px; padding: 20px; }
+.card.on { background: var(--text); color: var(--bg); border-top: 6px solid var(--text); }
+.card.off { border: 2px dashed var(--divider); border-top: 6px solid var(--n300); color: var(--n700); }
+.card-top { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.card.on .card-top { color: var(--a400); }
+.card-value { font-weight: 800; font-size: 34px; line-height: 1; letter-spacing: -0.03em; }
+.card-seg { font-weight: 800; font-size: 64px; line-height: .9; letter-spacing: -0.045em; }
 
 /* App */
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 32px; padding: 16px var(--gutter); border-bottom: 2px solid var(--divider); }
 .nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 24px; flex: 1; }
-.nav button, .linklike { padding: 8px 0; border: 0; background: none; color: var(--text); font-size: 14px; cursor: pointer; }
+.nav button { padding: 8px 0; border: 0; background: none; color: var(--text); font-size: 14px; cursor: pointer; white-space: nowrap; }
 .nav button[aria-current="page"] { color: var(--a700); font-weight: 600; }
 .nav button:hover { color: var(--a700); }
-.who { display: flex; align-items: center; gap: 16px; padding-left: 24px; border-left: 2px solid var(--divider); font-size: 13px; }
-.linklike { color: var(--a700); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
-@media (max-width: 720px) { .nav { order: 3; flex-basis: 100%; justify-content: flex-start; } .who { padding-left: 0; border-left: 0; } }
+.who { padding-left: 24px; border-left: 2px solid var(--divider); font-size: 13px; }
+@media (max-width: 720px) { .nav { order: 3; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; } .who { padding-left: 0; border-left: 0; } }
+.page { max-width: 1280px; padding: 36px var(--gutter) 80px; display: flex; flex-direction: column; gap: 28px; }
+.panel { padding-top: 20px; border-top: 2px solid var(--text); display: flex; flex-direction: column; gap: 16px; }
 
-/* Início (design 2b) */
-.split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 100px); }
-.poster { flex: 5 1 360px; display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 36px var(--gutter); background: var(--action); color: var(--bg); }
+/* Início (2b) */
+.split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 72px); }
+.poster { flex: 5 1 340px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: 36px var(--gutter); background: var(--action); color: var(--bg); }
 .poster-main { margin-top: auto; display: flex; flex-direction: column; gap: 20px; }
 .date { margin: 0; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
-.hello { margin: 0; font-weight: 800; font-size: clamp(52px, 6.5vw, 88px); line-height: .92; letter-spacing: -0.045em; }
 .headline { margin: 0; max-width: 460px; font-size: clamp(20px, 2vw, 26px); font-weight: 600; line-height: 1.2; }
 .facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 16px; border-top: 2px solid var(--bg); font-size: 14px; }
 .facts dd { margin: 0; font-weight: 800; }
@@ -76,9 +101,8 @@ button, input { font: inherit; }
 .tabs button + button { border-left: 1px solid var(--field); }
 .tabs button:hover { background: var(--n200); }
 .tabs button[aria-selected="true"] { background: var(--action); color: var(--bg); font-weight: 600; }
-.muted { color: var(--n700); font-size: 13px; margin: 0; }
 .list { list-style: none; margin: 0; padding: 0 var(--gutter); flex: 1; }
-.item { display: grid; grid-template-columns: 72px minmax(0, 1fr) 160px; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--divider); }
+.item { display: grid; grid-template-columns: 72px minmax(0, 1fr) 170px; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--divider); }
 .item:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
 @media (max-width: 640px) { .item { grid-template-columns: 48px minmax(0, 1fr); } .side { grid-column: 2; } }
 .num { font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--n600); }
@@ -90,309 +114,509 @@ button, input { font: inherit; }
 .tag-stage { background: var(--a100); color: var(--a800); }
 .tag-manual { background: var(--n200); color: var(--n800); }
 .tag-ai { border: 1px solid var(--field); color: var(--n800); }
-.side { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--n800); }
+.tag-stale { background: var(--text); color: var(--bg); }
+.side { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 13px; color: var(--n800); }
 .side strong { color: var(--text); }
+.side .btn { margin-top: 6px; min-height: 36px; padding: 6px 12px; font-size: 13px; }
 .late { color: var(--a700); font-weight: 600; }
-.empty { margin: 24px var(--gutter); padding: 32px 24px; border: 1px dashed var(--divider); color: var(--n700); }
 .queue-foot { padding: 16px var(--gutter); border-top: 2px solid var(--divider); }
-.btn-primary.wide { min-width: 240px; }
 
-/* Clientes */
-.page { max-width: 1280px; padding: 36px var(--gutter) 80px; display: flex; flex-direction: column; gap: 28px; }
-.kicker { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--a700); }
-.title { margin: 0; font-weight: 800; font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -0.035em; }
+/* Tabelas */
 .table-wrap { overflow-x: auto; border-top: 2px solid var(--text); }
 table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
 th { padding: 10px 12px 10px 0; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; text-align: left; }
-td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); }
+td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+.status { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 </style>
 </head>
 <body>
-<div class="demo-bar">DEMONSTRAÇÃO · dados de exemplo · nada é salvo</div>
-
-<!-- Login (2c, sem SSO) -->
-<div id="screen-login" class="login">
-  <section class="login-form">
-    <span class="brand">Onboardinho</span>
-    <div class="login-block">
-      <h1>Entrar</h1>
-      <form id="login-form" class="login-block" novalidate>
-        <div class="field">
-          <label for="email">E-mail corporativo</label>
-          <input id="email" class="input" type="email" autocomplete="username" required>
-        </div>
-        <div class="field">
-          <label for="senha">Senha</label>
-          <input id="senha" class="input" type="password" autocomplete="current-password" required>
-          <p id="login-error" class="error" role="alert" hidden></p>
-        </div>
-        <button type="submit" class="btn-primary btn-block">Entrar <span aria-hidden="true">→</span></button>
-      </form>
-      <div class="demo-users">
-        <strong>Usuários de demonstração</strong> (qualquer senha):
-        <ul>
-          <li>onboarder7d@empresa.com · Onboarder 7D</li>
-          <li>onboarder8d@empresa.com · Onboarder 8D</li>
-          <li>lider@empresa.com · Liderança 6D + 7D</li>
-        </ul>
-      </div>
-    </div>
-    <p class="note">Acesso para onboarders e liderança dos segmentos 6D, 7D e 8D.</p>
-  </section>
-  <section class="pitch" aria-label="Sobre o Onboardinho">
-    <p>O manual do time, no momento certo de cada cliente.</p>
-    <dl>
-      <div><dt>6D</dt><dd>Clientes N2 · N3</dd></div>
-      <div><dt>7D</dt><dd>Clientes N4 · N5</dd></div>
-      <div><dt>8D</dt><dd>Clientes N6+</dd></div>
-    </dl>
-  </section>
-</div>
-
-<!-- App -->
-<div id="screen-app" hidden>
-  <header class="topbar">
-    <span class="brand">Onboardinho</span>
-    <nav class="nav" aria-label="Principal">
-      <button type="button" data-page="inicio" aria-current="page">Início</button>
-      <button type="button" data-page="clientes" id="nav-clientes">Clientes</button>
-    </nav>
-    <div class="who"><span id="who"></span><button type="button" class="linklike" id="logout">Sair</button></div>
-  </header>
-
-  <main id="page-inicio" class="split">
-    <section class="poster" aria-labelledby="hello">
-      <div class="poster-main">
-        <p class="date" id="date"></p>
-        <h1 class="hello" id="hello"></h1>
-        <p class="headline" id="headline"></p>
-      </div>
-      <dl class="facts">
-        <div><dt id="fact-role"></dt><dd id="fact-seg"></dd></div>
-        <div><dt>Clientes</dt><dd id="fact-levels"></dd></div>
-      </dl>
-    </section>
-    <section class="queue" aria-label="Orientações priorizadas">
-      <div class="queue-head">
-        <div class="tabs" role="tablist" aria-label="Escopo" id="tabs"></div>
-        <p class="muted" id="queue-note"></p>
-      </div>
-      <ol class="list" id="list"></ol>
-      <p class="empty" id="empty" hidden></p>
-      <div class="queue-foot" id="foot">
-        <button type="button" class="btn-primary wide" id="start">Começar pelo 01 <span aria-hidden="true">→</span></button>
-      </div>
-    </section>
-  </main>
-
-  <main id="page-clientes" class="page" hidden>
-    <p class="kicker" id="clientes-kicker"></p>
-    <h1 class="title">Clientes</h1>
-    <p class="muted">Na versão final, os clientes entram por planilha (e depois pelo Astrobox).</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Cliente</th><th>Segmento</th><th>Responsável</th><th>Etapa</th><th>Na etapa</th></tr></thead>
-        <tbody id="clientes-body"></tbody>
-      </table>
-    </div>
-  </main>
-</div>
+<div id="root"></div>
+<div id="toast" class="toast" role="status" hidden></div>
 
 <script>
-// ---------- Dados de exemplo ----------
-var SEGMENTS = { "6D": "N2 · N3", "7D": "N4 · N5", "8D": "N6+" };
-var USERS = [
-  { id: "u-onb-7d", name: "Marina Costa", email: "onboarder7d@empresa.com", role: "onboarder", segments: ["7D"] },
-  { id: "u-onb-8d", name: "Rafael Lima", email: "onboarder8d@empresa.com", role: "onboarder", segments: ["8D"] },
-  { id: "u-lider", name: "Paula Reis", email: "lider@empresa.com", role: "lideranca", segments: ["6D", "7D"] }
-];
-function daysAgo(n) { return new Date(Date.now() - n * 86400000); }
-var CLIENTS = [
-  { id: "c-lumen", name: "Lumen Saúde", segment: "7D", ownerId: "u-onb-7d", stage: "Activation & Monitoring", since: daysAgo(12) },
-  { id: "c-vertice", name: "Vértice Log", segment: "7D", ownerId: "u-onb-7d", stage: "Ready for Activation", since: daysAgo(4) },
-  { id: "c-andrade", name: "Grupo Andrade", segment: "7D", ownerId: "u-onb-7d", stage: "Welcome", since: daysAgo(3) },
-  { id: "c-nobre", name: "Casa Nobre", segment: "7D", ownerId: "u-onb-7d", stage: "Pre Onboarding", since: daysAgo(1) },
-  { id: "c-orbita", name: "Órbita Pay", segment: "8D", ownerId: "u-onb-8d", stage: "Product Migration", since: daysAgo(6) },
-  { id: "c-ferraz", name: "Ferraz & Filhos", segment: "8D", ownerId: "u-onb-8d", stage: "Activation & Monitoring", since: daysAgo(2) }
-];
-var ORIENTATIONS = [
-  { scope: "cliente", clientId: "c-lumen", priority: 1, source: "ia", ref: "Manual 7D §5.1", title: "Lumen Saúde: uso caiu para 32%", text: "Abaixo de 40% na primeira quinzena. O manual pede contato com o responsável em até 48h." },
-  { scope: "cliente", clientId: "c-vertice", priority: 2, source: "ia", ref: "Manual 7D §4.3", title: "Vértice Log: go-live em 2 dias", text: "Faça o teste final com o responsável técnico e peça o aceite formal por e-mail." },
-  { scope: "cliente", clientId: "c-andrade", priority: 3, source: "lideranca", ref: "Manual 7D §2.2", title: "Grupo Andrade sem resposta há 3 dias", text: "Kit de boas-vindas enviado sem retorno. Reenvie e ligue antes de escalar." },
-  { scope: "cliente", clientId: "c-nobre", priority: 4, source: "lideranca", ref: "Manual 7D §1.1", title: "Casa Nobre: agendar o kickoff", text: "Contrato assinado ontem. Kickoff até sexta, com o responsável técnico confirmado." },
-  { scope: "cliente", clientId: "c-orbita", priority: 2, source: "ia", ref: "Manual 8D §3.4", title: "Órbita Pay: migração parada há 6 dias", text: "Confirme com o time técnico do cliente se o acesso à base antiga foi liberado." },
-  { scope: "segmento", segment: "7D", priority: 1, source: "lideranca", ref: "Manual 7D §3.2", title: "Checklist de migração v3 publicado", text: "Substitui a v2 em todos os clientes N4 e N5." },
-  { scope: "segmento", segment: "7D", priority: 2, source: "lideranca", ref: "Manual 7D §5", stage: "Activation & Monitoring", title: "Revisão semanal de Activation & Monitoring", text: "Quinta, 10h, com a liderança." },
-  { scope: "segmento", segment: "8D", priority: 1, source: "lideranca", ref: "Manual 8D §1.3", title: "Kickoff 8D sempre com sponsor executivo", text: "Sem sponsor confirmado, remarque o kickoff." },
-  { scope: "geral", priority: 1, source: "lideranca", ref: "Manual §1.4", title: "Go-live só com aceite formal por e-mail", text: "Nova regra a partir de hoje." },
-  { scope: "geral", priority: 2, source: "lideranca", ref: "Manual §2", title: "Treinamento do novo fluxo de migração", text: "Sexta, 15h · obrigatório para N2+." }
-];
+// ============ Servidor ============
+// Chama uma função api* do Code.gs e devolve uma Promise.
+function chamar(nome) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return new Promise(function (ok, falha) {
+    var runner = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) {
+      falha(new Error((e && e.message) || String(e)));
+    });
+    runner[nome].apply(runner, args);
+  });
+}
 
-// ---------- Utilitários ----------
-function $(id) { return document.getElementById(id); }
-// Cria elemento com texto seguro (sem innerHTML).
-function el(tag, attrs, children) {
-  var node = document.createElement(tag);
+// ============ Utilitários de tela ============
+var SEGMENTOS = { '6D': 'Clientes N2 · N3', '7D': 'Clientes N4 · N5', '8D': 'Clientes N6+' };
+var ORDEM = ['6D', '7D', '8D'];
+var PAPEIS = { onboarder: 'Onboarder', lideranca: 'Liderança' };
+var ETAPAS = ['Pre Onboarding', 'Welcome', 'Product Migration', 'Ready for Activation', 'Activation & Monitoring', 'Accomplished', 'Unaccomplished'];
+
+// Cria elementos com texto seguro (nunca innerHTML com dados).
+function el(tag, attrs, filhos) {
+  var n = document.createElement(tag);
   Object.keys(attrs || {}).forEach(function (k) {
-    if (k === "text") node.textContent = attrs[k];
-    else if (k === "class") node.className = attrs[k];
-    else node.setAttribute(k, attrs[k]);
+    var v = attrs[k];
+    if (v === undefined || v === null || v === false) return;
+    if (k === 'text') n.textContent = v;
+    else if (k === 'class') n.className = v;
+    else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+    else if (k === 'value') n.value = v;
+    else if (k === 'checked') n.checked = !!v;
+    else n.setAttribute(k, v === true ? '' : v);
   });
-  (children || []).forEach(function (c) { if (c) node.appendChild(c); });
-  return node;
-}
-function daysSince(date) { return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000)); }
-function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
-
-// ---------- Estado ----------
-var state = { user: null, tab: "carteira", page: "inicio" };
-
-function visibleClients(user) {
-  return CLIENTS.filter(function (c) {
-    return user.role === "lideranca" ? user.segments.indexOf(c.segment) >= 0 : c.ownerId === user.id;
+  (filhos || []).forEach(function (f) {
+    if (f === null || f === undefined || f === false) return;
+    n.appendChild(typeof f === 'string' ? document.createTextNode(f) : f);
   });
+  return n;
+}
+function plural(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
+function dias(iso) { return Math.max(0, Math.floor((new Date(S.agora).getTime() - new Date(iso).getTime()) / 86400000)); }
+function data(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : ''; }
+function nome(email) { return (S.nomes && S.nomes[email]) || email; }
+function descPedido(p) {
+  var segs = (p.segmentos || []).join(' + ');
+  return p.tipo === 'papel' ? 'Papel → ' + PAPEIS[p.papel] + (segs ? ' (' + segs + ')' : '') : 'Segmentação → ' + segs;
 }
 
-function buildQueue(user, tab) {
-  var mine = {};
-  visibleClients(user).forEach(function (c) { mine[c.id] = c; });
-  return ORIENTATIONS.filter(function (o) {
-    if (tab === "carteira") return o.scope === "cliente" && mine[o.clientId];
-    if (tab === "time") return o.scope === "segmento" && user.segments.indexOf(o.segment) >= 0;
-    return o.scope === "geral";
-  }).map(function (o) {
-    return Object.assign({}, o, { client: o.clientId ? mine[o.clientId] : null });
-  }).sort(function (a, b) { return a.priority - b.priority || a.title.localeCompare(b.title, "pt-BR"); });
+var timerToast;
+function avisar(msg, erro) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (erro ? ' erro' : '');
+  t.setAttribute('role', erro ? 'alert' : 'status');
+  t.hidden = false;
+  clearTimeout(timerToast);
+  timerToast = setTimeout(function () { t.hidden = true; }, erro ? 7000 : 3500);
 }
 
-function tabLabel(tab, user) {
-  if (tab === "geral") return "Geral";
-  if (tab === "time") return "Time " + user.segments.join(" + ");
-  return user.role === "lideranca" ? "Clientes do time" : "Minha carteira";
-}
-
-// ---------- Telas ----------
-function renderInicio() {
-  var user = state.user, now = new Date();
-  var hour = now.getHours();
-  var lead = user.role === "lideranca";
-  var portfolio = buildQueue(user, "carteira");
-  var needing = {};
-  portfolio.forEach(function (i) { if (i.client) needing[i.client.id] = true; });
-  var n = Object.keys(needing).length;
-
-  $("date").textContent = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  $("hello").textContent = (hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite") + ", " + user.name.split(" ")[0] + ".";
-  $("headline").textContent = n === 0
-    ? (lead ? "Nenhum cliente do time com ação hoje." : "Nenhum cliente seu precisa de ação hoje.")
-    : lead ? plural(n, "cliente do time precisa", "clientes do time precisam") + " de ação hoje."
-           : plural(n, "cliente precisa", "clientes precisam") + " de você hoje. Comece pelo 01.";
-  $("fact-role").textContent = lead ? "Liderança" : "Onboarder";
-  $("fact-seg").textContent = (user.segments.length > 1 ? "Segmentos " : "Segmento ") + user.segments.join(" + ");
-  $("fact-levels").textContent = user.segments.map(function (s) { return SEGMENTS[s]; }).join(" · ");
-
-  var tabs = $("tabs");
-  tabs.textContent = "";
-  ["carteira", "time", "geral"].forEach(function (t) {
-    var b = el("button", { type: "button", role: "tab", "aria-selected": String(t === state.tab), text: tabLabel(t, user) });
-    b.addEventListener("click", function () { state.tab = t; renderInicio(); });
-    tabs.appendChild(b);
-  });
-
-  var queue = state.tab === "carteira" ? portfolio : buildQueue(user, state.tab);
-  $("queue-note").textContent = plural(queue.length, "orientação", "orientações") + " · ordenadas por urgência";
-  var list = $("list");
-  list.textContent = "";
-  queue.forEach(function (item, i) {
-    var stage = item.client ? item.client.stage : item.stage;
-    var days = item.client ? daysSince(item.client.since) : null;
-    var side = item.client
-      ? el("div", { class: "side" }, [el("strong", { text: item.client.name }), el("span", { class: days > 10 ? "late" : "", text: plural(days, "dia", "dias") + " na etapa" })])
-      : el("div", { class: "side" }, [el("span", { text: item.segment ? "Segmento " + item.segment : "Todos os times" })]);
-    list.appendChild(el("li", { class: "item", id: "item-" + (i + 1), tabindex: "-1" }, [
-      el("span", { class: "num" + (i === 0 ? " first" : ""), "aria-hidden": "true", text: String(i + 1).padStart(2, "0") }),
-      el("div", {}, [
-        el("h2", { text: item.title }),
-        el("p", { text: item.text }),
-        el("div", { class: "tags" }, [
-          stage ? el("span", { class: "tag tag-stage", text: stage }) : null,
-          el("span", { class: "tag tag-manual", text: item.ref }),
-          item.source === "ia" ? el("span", { class: "tag tag-ai", text: "Sugestão da IA · revisar" }) : null
-        ])
-      ]),
-      side
-    ]));
-  });
-  $("empty").hidden = queue.length > 0;
-  $("empty").textContent = state.tab === "carteira" ? "Nenhuma orientação para os seus clientes agora." : "Nenhuma orientação nesta aba agora.";
-  $("foot").hidden = queue.length === 0;
-}
-
-function renderClientes() {
-  var user = state.user;
-  $("clientes-kicker").textContent = "Segmentos " + user.segments.join(" + ");
-  var names = {};
-  USERS.forEach(function (u) { names[u.id] = u.name; });
-  var body = $("clientes-body");
-  body.textContent = "";
-  visibleClients(user).forEach(function (c) {
-    var d = daysSince(c.since);
-    body.appendChild(el("tr", {}, [
-      el("td", {}, [el("strong", { text: c.name })]),
-      el("td", { text: c.segment }),
-      el("td", { text: names[c.ownerId] || "—" }),
-      el("td", { text: c.stage }),
-      el("td", { class: d > 10 ? "late" : "", text: plural(d, "dia", "dias") })
-    ]));
+// Executa uma ação no servidor: trava os botões, atualiza o estado e redesenha.
+// Resolve com true se deu certo, false se deu erro (o erro já aparece para a pessoa).
+var ocupado = false;
+function agir(promessa, sucesso) {
+  if (ocupado) return Promise.resolve(false);
+  ocupado = true;
+  document.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+  return promessa.then(function (novo) {
+    S = novo;
+    ocupado = false;
+    desenhar();
+    if (sucesso) avisar(sucesso);
+    return true;
+  }).catch(function (e) {
+    ocupado = false;
+    desenhar();
+    avisar(e.message, true);
+    return false;
   });
 }
 
-function showPage(page) {
-  state.page = page;
-  $("page-inicio").hidden = page !== "inicio";
-  $("page-clientes").hidden = page !== "clientes";
-  document.querySelectorAll(".nav button").forEach(function (b) {
-    if (b.dataset.page === page) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
-  });
-  if (page === "inicio") renderInicio(); else renderClientes();
+// ============ Estado ============
+var S = null; // estado vindo do servidor (apiEstado)
+var UI = { pagina: 'inicio', aba: 'carteira', ajuste: null };
+
+function podeLideranca() { return S.eu.admin || S.eu.papel === 'lideranca'; }
+
+function clientesPorId() {
+  var m = {};
+  S.clientes.forEach(function (c) { m[c.id] = c; });
+  return m;
 }
 
-function enterApp(user) {
-  state.user = user;
-  state.tab = "carteira";
-  $("who").textContent = user.name + " · " + (user.role === "lideranca" ? "Liderança" : "Onboarder");
-  $("nav-clientes").hidden = user.role !== "lideranca";
-  $("screen-login").hidden = true;
-  $("screen-app").hidden = false;
-  showPage("inicio");
+function fila(aba) {
+  var meus = clientesPorId();
+  return S.orientacoes.filter(function (o) {
+    if (o.status !== 'ativa') return false;
+    if (aba === 'carteira') return o.escopo === 'cliente' && meus[o.cliente];
+    if (aba === 'time') return o.escopo === 'segmento' && S.eu.segmentos.indexOf(o.segmento) >= 0;
+    return o.escopo === 'geral';
+  }).sort(function (a, b) { return a.prioridade - b.prioridade || a.titulo.localeCompare(b.titulo, 'pt-BR'); });
 }
 
-// ---------- Eventos ----------
-$("login-form").addEventListener("submit", function (e) {
-  e.preventDefault();
-  var email = $("email").value.trim().toLowerCase();
-  var user = USERS.filter(function (u) { return u.email === email; })[0];
-  var err = $("login-error");
-  if (!user || !$("senha").value) {
-    err.textContent = "E-mail ou senha incorretos. Use um dos usuários de demonstração.";
-    err.hidden = false;
+// ============ Telas ============
+function desenhar() {
+  var root = document.getElementById('root');
+  root.textContent = '';
+  if (!S) { root.appendChild(telaSimples('Carregando…', '')); return; }
+  if (S.tela === 'sem-email') {
+    root.appendChild(telaSimples('Não conseguimos identificar sua conta.',
+      'Entre no navegador só com a sua conta Google da empresa e recarregue a página.'));
     return;
   }
-  err.hidden = true;
-  enterApp(user);
-});
-$("logout").addEventListener("click", function () {
-  state.user = null;
-  $("screen-app").hidden = true;
-  $("screen-login").hidden = false;
-  $("senha").value = "";
-});
-document.querySelectorAll(".nav button").forEach(function (b) {
-  b.addEventListener("click", function () { showPage(b.dataset.page); });
-});
-$("start").addEventListener("click", function () {
-  var first = $("item-1");
-  if (first) { first.scrollIntoView({ behavior: "smooth", block: "center" }); first.focus({ preventScroll: true }); }
+  if (S.tela === 'sem-acesso') {
+    root.appendChild(telaSimples('Você ainda não tem acesso.',
+      'Sua conta (' + S.email + ') não está cadastrada no Onboardinho. Peça para o admin te cadastrar.'));
+    return;
+  }
+  if (S.tela === 'primeiro-acesso' || UI.pagina === 'meu-acesso') { root.appendChild(telaAcesso()); return; }
+  root.appendChild(telaApp());
+}
+
+function telaSimples(titulo, texto) {
+  return el('div', { class: 'full-screen' }, [
+    el('header', { class: 'full-head' }, [el('span', { class: 'brand', text: 'Onboardinho' })]),
+    el('main', { class: 'full-main' }, [el('h1', { class: 'big', text: titulo }), texto ? el('p', { class: 'lead', text: texto }) : null])
+  ]);
+}
+
+// ---------- Primeiro acesso / Meu acesso ----------
+function telaAcesso() {
+  var eu = S.eu;
+  var primeiro = S.tela === 'primeiro-acesso';
+  var pendente = S.meusPedidos.filter(function (p) { return p.status === 'pendente'; })[0];
+  var corpo;
+
+  if (UI.ajuste) {
+    corpo = formAjuste();
+  } else {
+    corpo = el('section', { class: 'stack' }, [
+      el('p', { class: 'kicker', text: 'Oi, ' + eu.nome.split(' ')[0] }),
+      el('h1', { class: 'big', text: primeiro ? 'Seu acesso já está liberado.' : 'Seu acesso.' }),
+      el('p', { class: 'lead', text: 'Papel e segmentação vêm da sua liberação. Se algo estiver errado, peça ajuste: o pedido vai para a liderança.' }),
+      el('ul', { class: 'cards' }, [
+        el('li', { class: 'card on' }, [el('span', { class: 'card-top', text: 'Papel' }), el('span', { class: 'card-value', text: eu.admin ? PAPEIS[eu.papel] + ' · Admin' : PAPEIS[eu.papel] })])
+      ].concat(ORDEM.map(function (s) {
+        var tem = eu.segmentos.indexOf(s) >= 0;
+        return el('li', { class: 'card ' + (tem ? 'on' : 'off') }, [
+          el('span', { class: 'card-top', text: tem ? 'Liberado' : 'Sem acesso' }),
+          el('span', { class: 'card-seg', text: s }),
+          el('span', { text: SEGMENTOS[s] })
+        ]);
+      }))),
+      el('p', { class: 'muted', text: 'Liberado por ' + (nome(eu.liberadoPor) || '—') + (eu.liberadoEm ? ' · ' + data(eu.liberadoEm) : '') }),
+      pendente ? el('p', { class: 'notice', text: 'Pedido aguardando resposta: ' + descPedido(pendente) }) : null
+    ]);
+  }
+
+  var voltar = !primeiro && !UI.ajuste ? el('button', { class: 'btn btn-secondary', type: 'button', text: '← Início', onclick: function () { UI.pagina = 'inicio'; desenhar(); } }) : null;
+  var cancelar = UI.ajuste ? el('button', { class: 'btn btn-secondary', type: 'button', text: '← Voltar', onclick: function () { UI.ajuste = null; desenhar(); } }) : null;
+  var acoes = [];
+  if (UI.ajuste) {
+    acoes.push(el('button', { class: 'btn btn-primary btn-wide', type: 'button', onclick: enviarAjuste }, ['Enviar pedido', el('span', { 'aria-hidden': 'true', text: '→' })]));
+  } else {
+    if (!pendente) acoes.push(el('button', { class: 'btn btn-secondary', type: 'button', text: 'Algo está errado', onclick: function () {
+      UI.ajuste = { tipo: 'segmentacao', papel: eu.papel === 'onboarder' ? 'lideranca' : 'onboarder', segmentos: eu.segmentos.slice(), nota: '' };
+      desenhar();
+    } }));
+    if (primeiro) acoes.push(el('button', { class: 'btn btn-primary btn-wide', type: 'button', onclick: function () { agir(chamar('apiConfirmarAcesso')); } }, ['Está certo, entrar', el('span', { 'aria-hidden': 'true', text: '→' })]));
+  }
+
+  return el('div', { class: 'full-screen' }, [
+    el('header', { class: 'full-head' }, [el('span', { class: 'brand', text: 'Onboardinho' }), el('span', { text: (primeiro ? 'Primeiro acesso · ' : 'Meu acesso · ') + eu.email })]),
+    el('main', { class: 'full-main' }, [corpo]),
+    el('footer', { class: 'full-foot' }, [el('div', {}, [voltar, cancelar]), el('div', { class: 'actions' }, acoes)])
+  ]);
+}
+
+function formAjuste() {
+  var a = UI.ajuste;
+  var papelAlvo = a.tipo === 'papel' ? a.papel : S.eu.papel;
+  var unico = papelAlvo === 'onboarder';
+  var precisaSegmento = a.tipo === 'segmentacao' || (unico && S.eu.segmentos.length > 1);
+  function radio(name, value, label, checked, onchange) {
+    return el('label', { class: 'check' }, [el('input', { type: 'radio', name: name, value: value, checked: checked, onchange: onchange }), label]);
+  }
+  return el('section', { class: 'stack' }, [
+    el('p', { class: 'kicker', text: 'Pedir ajuste' }),
+    el('h1', { class: 'big', text: 'O que está diferente?' }),
+    el('fieldset', {}, [el('legend', { text: 'O que mudar' }),
+      radio('tipo', 'segmentacao', 'Segmentação', a.tipo === 'segmentacao', function () { a.tipo = 'segmentacao'; a.segmentos = S.eu.segmentos.slice(); desenhar(); }),
+      radio('tipo', 'papel', 'Papel', a.tipo === 'papel', function () { a.tipo = 'papel'; a.segmentos = S.eu.segmentos.slice(); desenhar(); })
+    ]),
+    a.tipo === 'papel' ? el('fieldset', {}, [el('legend', { text: 'Qual deveria ser o seu papel?' })].concat(['onboarder', 'lideranca'].filter(function (p) { return p !== S.eu.papel; }).map(function (p) {
+      return radio('papel', p, PAPEIS[p], a.papel === p, function () { a.papel = p; desenhar(); });
+    }))) : null,
+    precisaSegmento ? el('fieldset', {}, [el('legend', { text: unico ? 'Qual segmentação? (onboarder tem uma)' : 'Quais segmentações você deveria ter?' })].concat(ORDEM.map(function (s) {
+      return el('label', { class: 'check' }, [el('input', { type: unico ? 'radio' : 'checkbox', name: 'seg', value: s, checked: a.segmentos.indexOf(s) >= 0, onchange: function (e) {
+        if (unico) a.segmentos = [s];
+        else if (e.target.checked) a.segmentos = ORDEM.filter(function (x) { return x === s || a.segmentos.indexOf(x) >= 0; });
+        else a.segmentos = a.segmentos.filter(function (x) { return x !== s; });
+      } }), s + ' · ' + SEGMENTOS[s]]);
+    }))) : null,
+    el('div', { class: 'field' }, [el('label', { for: 'nota', text: 'Quer explicar? (opcional)' }),
+      el('textarea', { id: 'nota', class: 'input', maxlength: '500', oninput: function (e) { a.nota = e.target.value; } }, [a.nota])])
+  ]);
+}
+
+function enviarAjuste() {
+  var a = UI.ajuste;
+  agir(chamar('apiPedirAjuste', { tipo: a.tipo, papel: a.papel, segmentos: a.segmentos, nota: a.nota }), 'Pedido enviado para a liderança.')
+    .then(function (ok) { if (ok) { UI.ajuste = null; desenhar(); } });
+}
+
+// ---------- App ----------
+function telaApp() {
+  var eu = S.eu;
+  var paginas = [
+    ['inicio', 'Início', true],
+    ['clientes', 'Clientes', podeLideranca()],
+    ['orientacao', 'Nova orientação', podeLideranca()],
+    ['meu-acesso', 'Meu acesso', true],
+    ['pedidos', S.paraDecidir.length ? 'Pedidos (' + S.paraDecidir.length + ')' : 'Pedidos', podeLideranca()],
+    ['usuarios', 'Usuários', eu.admin]
+  ].filter(function (p) { return p[2]; });
+  if (!paginas.some(function (p) { return p[0] === UI.pagina; })) UI.pagina = 'inicio';
+
+  var conteudo = {
+    inicio: paginaInicio, clientes: paginaClientes, orientacao: paginaOrientacao,
+    pedidos: paginaPedidos, usuarios: paginaUsuarios
+  }[UI.pagina]();
+
+  return el('div', {}, [
+    el('header', { class: 'topbar' }, [
+      el('span', { class: 'brand', text: 'Onboardinho' }),
+      el('nav', { class: 'nav', 'aria-label': 'Principal' }, paginas.map(function (p) {
+        return el('button', { type: 'button', 'aria-current': UI.pagina === p[0] ? 'page' : null, text: p[1], onclick: function () { UI.pagina = p[0]; UI.ajuste = null; desenhar(); window.scrollTo(0, 0); } });
+      })),
+      el('span', { class: 'who', text: eu.nome + ' · ' + (eu.admin ? 'Admin' : PAPEIS[eu.papel]) })
+    ]),
+    conteudo
+  ]);
+}
+
+function paginaInicio() {
+  var eu = S.eu;
+  var lider = eu.papel === 'lideranca' || eu.admin;
+  var carteira = fila('carteira');
+  var itens = UI.aba === 'carteira' ? carteira : fila(UI.aba);
+  var porCliente = clientesPorId();
+  var precisam = {};
+  carteira.forEach(function (o) { precisam[o.cliente] = true; });
+  var n = Object.keys(precisam).length;
+  var agora = new Date(S.agora);
+  var hora = new Date().getHours();
+  var frase = n === 0
+    ? (lider ? 'Nenhum cliente do time com ação hoje.' : 'Nenhum cliente seu precisa de ação hoje.')
+    : lider ? plural(n, 'cliente do time precisa', 'clientes do time precisam') + ' de ação hoje.'
+            : plural(n, 'cliente precisa', 'clientes precisam') + ' de você hoje. Comece pelo 01.';
+  var pendente = S.meusPedidos.filter(function (p) { return p.status === 'pendente'; })[0];
+  var abas = [['carteira', lider ? 'Clientes do time' : 'Minha carteira'], ['time', 'Time ' + eu.segmentos.join(' + ')], ['geral', 'Geral']];
+
+  return el('main', { class: 'split' }, [
+    el('section', { class: 'poster', 'aria-labelledby': 'ola' }, [
+      el('div', { class: 'poster-main' }, [
+        el('p', { class: 'date', text: agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) }),
+        el('h1', { id: 'ola', class: 'big', text: (hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + eu.nome.split(' ')[0] + '.' }),
+        el('p', { class: 'headline', text: frase })
+      ]),
+      el('dl', { class: 'facts' }, [
+        el('div', {}, [el('dt', { text: PAPEIS[eu.papel] }), el('dd', { text: (eu.segmentos.length > 1 ? 'Segmentos ' : 'Segmento ') + eu.segmentos.join(' + ') })]),
+        el('div', {}, [el('dt', { text: 'Clientes' }), el('dd', { text: eu.segmentos.map(function (s) { return SEGMENTOS[s].replace('Clientes ', ''); }).join(' · ') })])
+      ])
+    ]),
+    el('section', { class: 'queue', 'aria-label': 'Orientações priorizadas' }, [
+      el('div', { class: 'queue-head' }, [
+        el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Escopo' }, abas.map(function (a) {
+          return el('button', { type: 'button', role: 'tab', 'aria-selected': String(UI.aba === a[0]), text: a[1], onclick: function () { UI.aba = a[0]; desenhar(); } });
+        })),
+        el('p', { class: 'muted', text: plural(itens.length, 'orientação', 'orientações') + ' · ordenadas por urgência' })
+      ]),
+      pendente ? el('p', { class: 'notice', style: 'margin: 16px var(--gutter) 0', text: 'Seu pedido de ajuste está aguardando resposta: ' + descPedido(pendente) + '.' }) : null,
+      itens.length === 0
+        ? el('p', { class: 'empty', style: 'margin: 24px var(--gutter)', text: UI.aba === 'carteira' ? 'Nenhuma orientação para os seus clientes agora.' : 'Nenhuma orientação nesta aba agora.' })
+        : el('ol', { class: 'list' }, itens.map(function (o, i) { return itemFila(o, i, porCliente[o.cliente]); })),
+      itens.length ? el('div', { class: 'queue-foot' }, [el('button', { class: 'btn btn-primary btn-wide', type: 'button', onclick: function () {
+        var primeiro = document.getElementById('item-1');
+        if (primeiro) { primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' }); primeiro.focus({ preventScroll: true }); }
+      } }, ['Começar pelo 01', el('span', { 'aria-hidden': 'true', text: '→' })])]) : null
+    ])
+  ]);
+}
+
+function itemFila(o, i, cliente) {
+  var etapa = cliente ? cliente.etapa : o.etapa;
+  var desatualizada = cliente && o.etapa && o.etapa !== cliente.etapa;
+  var d = cliente ? dias(cliente.desde) : null;
+  var concluir = o.podeConcluir ? el('button', { class: 'btn btn-secondary', type: 'button', text: o.escopo === 'cliente' ? 'Feito' : 'Arquivar', onclick: function () {
+    agir(chamar('apiConcluirOrientacao', o.id), o.escopo === 'cliente' ? 'Marcada como feita.' : 'Arquivada.');
+  } }) : null;
+  return el('li', { class: 'item', id: 'item-' + (i + 1), tabindex: '-1' }, [
+    el('span', { class: 'num' + (i === 0 ? ' first' : ''), 'aria-hidden': 'true', text: String(i + 1).padStart(2, '0') }),
+    el('div', {}, [
+      el('h2', { text: o.titulo }),
+      o.descricao ? el('p', { text: o.descricao }) : null,
+      el('div', { class: 'tags' }, [
+        etapa ? el('span', { class: 'tag tag-stage', text: etapa }) : null,
+        o.refManual ? el('span', { class: 'tag tag-manual', text: o.refManual }) : null,
+        o.origem === 'ia' ? el('span', { class: 'tag tag-ai', text: 'Sugestão da IA · revisar' }) : null,
+        desatualizada ? el('span', { class: 'tag tag-stale', text: 'Desatualizada: escrita para ' + o.etapa }) : null
+      ])
+    ]),
+    el('div', { class: 'side' }, cliente
+      ? [el('strong', { text: cliente.nome }), el('span', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') + ' na etapa' }), concluir]
+      : [el('span', { text: o.segmento ? 'Segmento ' + o.segmento : 'Todos os times' }), concluir])
+  ]);
+}
+
+function paginaClientes() {
+  var lista = S.clientes.slice().sort(function (a, b) {
+    return ETAPAS.indexOf(a.etapa) - ETAPAS.indexOf(b.etapa) || a.nome.localeCompare(b.nome, 'pt-BR');
+  });
+  return el('main', { class: 'page' }, [
+    el('div', { class: 'stack' }, [
+      el('p', { class: 'kicker', text: S.eu.admin ? 'Todos os segmentos' : 'Segmentos ' + S.eu.segmentos.join(' + ') }),
+      el('h1', { class: 'title', text: 'Clientes' }),
+      el('p', { class: 'lead', text: S.eu.admin
+        ? 'Os clientes vêm da aba "Clientes" da planilha. Cole a exportação lá com as colunas id_externo, nome, segmento, responsavel_email, etapa e desde (dd/mm/aaaa).'
+        : 'Clientes dos seus segmentos. A lista é atualizada pelo admin.' })
+    ]),
+    S.avisosClientes && S.avisosClientes.length ? el('div', { class: 'notice' }, [
+      el('strong', { text: plural(S.avisosClientes.length, 'cliente precisa', 'clientes precisam') + ' de novo responsável:' }),
+      el('ul', {}, S.avisosClientes.slice(0, 30).map(function (p) { return el('li', { text: p }); }))
+    ]) : null,
+    S.problemasClientes.length ? el('div', { class: 'warn', role: 'alert' }, [
+      el('strong', { text: plural(S.problemasClientes.length, 'linha da aba Clientes não entrou', 'linhas da aba Clientes não entraram') + ':' }),
+      el('ul', {}, S.problemasClientes.slice(0, 30).map(function (p) { return el('li', { text: p }); }))
+    ]) : null,
+    lista.length === 0 ? el('p', { class: 'empty', text: 'Nenhum cliente ainda.' }) : el('div', { class: 'table-wrap' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa'].map(function (h) { return el('th', { text: h }); }))]),
+        el('tbody', {}, lista.map(function (c) {
+          var d = dias(c.desde);
+          return el('tr', {}, [
+            el('td', {}, [el('strong', { text: c.nome }), c.idExterno ? el('div', { class: 'muted', text: c.idExterno }) : null]),
+            el('td', { text: c.segmento }),
+            el('td', { text: nome(c.responsavelEmail) }),
+            el('td', { text: c.etapa }),
+            el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') })
+          ]);
+        }))
+      ])
+    ])
+  ]);
+}
+
+function paginaOrientacao() {
+  var eu = S.eu;
+  var f = UI.form || (UI.form = { escopo: eu.admin ? 'geral' : 'segmento', segmento: eu.segmentos[0], cliente: '', etapa: '', prioridade: '2', titulo: '', descricao: '', refManual: '' });
+  var meusSegs = eu.admin ? ORDEM : eu.segmentos;
+  var clientes = S.clientes.filter(function (c) { return eu.admin || eu.segmentos.indexOf(c.segmento) >= 0; });
+  var escopos = [['geral', 'Todos os times', eu.admin], ['segmento', 'Um segmento', true], ['cliente', 'Um cliente', true]].filter(function (e) { return e[2]; });
+  function campo(id, rotulo, input) { return el('div', { class: 'field' }, [el('label', { for: id, text: rotulo }), input]); }
+  function sel(id, valor, opcoes, onchange) {
+    return el('select', { id: id, class: 'input', onchange: function (e) { onchange(e.target.value); } }, opcoes.map(function (o) {
+      return el('option', { value: o[0], selected: o[0] === valor ? 'selected' : null, text: o[1] });
+    }));
+  }
+  return el('main', { class: 'page' }, [
+    el('div', { class: 'stack' }, [
+      el('p', { class: 'kicker', text: 'Orientação do manual' }),
+      el('h1', { class: 'title', text: 'Nova orientação' }),
+      el('p', { class: 'lead', text: 'Ela entra na fila da página inicial de quem é afetado, ordenada pela prioridade.' })
+    ]),
+    el('form', { class: 'form panel', onsubmit: function (e) {
+      e.preventDefault();
+      agir(chamar('apiCriarOrientacao', f), 'Orientação publicada.').then(function (ok) {
+        if (ok) { UI.form = null; desenhar(); }
+      });
+    } }, [
+      el('fieldset', { class: 'full' }, [el('legend', { text: 'Para quem vale' })].concat(escopos.map(function (e) {
+        return el('label', { class: 'check' }, [el('input', { type: 'radio', name: 'escopo', value: e[0], checked: f.escopo === e[0], onchange: function () { f.escopo = e[0]; desenhar(); } }), e[1]]);
+      }))),
+      f.escopo === 'segmento' ? campo('f-seg', 'Segmento', sel('f-seg', f.segmento, meusSegs.map(function (s) { return [s, s + ' · ' + SEGMENTOS[s]]; }), function (v) { f.segmento = v; })) : null,
+      f.escopo === 'cliente' ? campo('f-cli', 'Cliente', sel('f-cli', f.cliente, [['', 'Escolha…']].concat(clientes.map(function (c) { return [c.id, c.nome + ' (' + c.segmento + ')']; })), function (v) { f.cliente = v; })) : null,
+      campo('f-etapa', 'Etapa (opcional)', sel('f-etapa', f.etapa, [['', 'Qualquer etapa']].concat(ETAPAS.map(function (e) { return [e, e]; })), function (v) { f.etapa = v; })),
+      campo('f-prio', 'Prioridade', sel('f-prio', f.prioridade, [['1', '1 · urgente'], ['2', '2 · alta'], ['3', '3 · normal'], ['4', '4 · baixa']], function (v) { f.prioridade = v; })),
+      el('div', { class: 'field full' }, [el('label', { for: 'f-titulo', text: 'Título' }), el('input', { id: 'f-titulo', class: 'input', required: true, maxlength: '140', value: f.titulo, oninput: function (e) { f.titulo = e.target.value; } })]),
+      el('div', { class: 'field full' }, [el('label', { for: 'f-desc', text: 'O que fazer' }), el('textarea', { id: 'f-desc', class: 'input', maxlength: '1000', oninput: function (e) { f.descricao = e.target.value; } }, [f.descricao])]),
+      el('div', { class: 'field' }, [el('label', { for: 'f-ref', text: 'Seção do manual' }), el('input', { id: 'f-ref', class: 'input', placeholder: 'Ex.: Manual 7D §5.1', maxlength: '80', value: f.refManual, oninput: function (e) { f.refManual = e.target.value; } })]),
+      el('div', { class: 'full actions' }, [el('button', { class: 'btn btn-primary btn-wide', type: 'submit' }, ['Publicar orientação', el('span', { 'aria-hidden': 'true', text: '→' })])])
+    ])
+  ]);
+}
+
+function paginaPedidos() {
+  return el('main', { class: 'page' }, [
+    el('div', { class: 'stack' }, [
+      el('p', { class: 'kicker', text: 'Pedidos de ajuste de acesso' }),
+      el('h1', { class: 'title', text: 'Pedidos' }),
+      el('p', { class: 'lead', text: S.eu.admin ? 'Como admin, você decide qualquer pedido, inclusive mudança de papel.'
+        : 'Você decide pedidos de segmentação dentro de ' + S.eu.segmentos.join(', ') + '. Mudança de papel fica com o admin.' })
+    ]),
+    el('section', { class: 'stack' }, [
+      el('h2', { class: 'h2', text: 'Aguardando (' + S.paraDecidir.length + ')' }),
+      S.paraDecidir.length === 0 ? el('p', { class: 'empty', text: 'Nenhum pedido aguardando você.' }) : el('div', { class: 'table-wrap' }, [
+        el('table', {}, [
+          el('thead', {}, [el('tr', {}, ['Quem', 'Pede', 'Motivo', 'Decisão'].map(function (h) { return el('th', { text: h }); }))]),
+          el('tbody', {}, S.paraDecidir.map(function (p) {
+            return el('tr', {}, [
+              el('td', {}, [el('strong', { text: nome(p.email) }), el('div', { class: 'muted', text: p.email })]),
+              el('td', {}, [el('strong', { text: descPedido(p) })]),
+              el('td', { class: 'muted', text: p.nota || '—' }),
+              el('td', {}, [el('div', { class: 'actions' }, [
+                el('button', { class: 'btn btn-primary', type: 'button', text: 'Aprovar', onclick: function () { agir(chamar('apiDecidir', p.id, true), 'Aprovado e aplicado.'); } }),
+                el('button', { class: 'btn btn-secondary', type: 'button', text: 'Recusar', onclick: function () { agir(chamar('apiDecidir', p.id, false), 'Recusado.'); } })
+              ])])
+            ]);
+          }))
+        ])
+      ])
+    ]),
+    S.historico.length ? el('section', { class: 'stack' }, [
+      el('h2', { class: 'h2', text: 'Histórico' }),
+      el('div', { class: 'table-wrap' }, [el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['Quem', 'Pediu', 'Status', 'Decidido por'].map(function (h) { return el('th', { text: h }); }))]),
+        el('tbody', {}, S.historico.map(function (p) {
+          return el('tr', {}, [el('td', { text: nome(p.email) }), el('td', { text: descPedido(p) }), el('td', { class: 'status', text: p.status }), el('td', { class: 'muted', text: nome(p.decididoPor) })]);
+        }))
+      ])])
+    ]) : null
+  ]);
+}
+
+function paginaUsuarios() {
+  var f = UI.novo || (UI.novo = { nome: '', email: '', papel: 'onboarder', segmentos: [], admin: false });
+  return el('main', { class: 'page' }, [
+    el('div', { class: 'stack' }, [
+      el('p', { class: 'kicker', text: 'Admin' }),
+      el('h1', { class: 'title', text: 'Usuários' }),
+      el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha.' })
+    ]),
+    el('form', { class: 'form panel', onsubmit: function (e) {
+      e.preventDefault();
+      agir(chamar('apiCriarUsuario', f), f.nome + ' foi cadastrado. Mande o link do app para a pessoa.').then(function (ok) {
+        if (ok) { UI.novo = null; desenhar(); }
+      });
+    } }, [
+      el('div', { class: 'field' }, [el('label', { for: 'u-nome', text: 'Nome' }), el('input', { id: 'u-nome', class: 'input', required: true, value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
+      el('div', { class: 'field' }, [el('label', { for: 'u-email', text: 'E-mail (conta Google da empresa)' }), el('input', { id: 'u-email', class: 'input', type: 'email', required: true, value: f.email, oninput: function (e) { f.email = e.target.value; } })]),
+      el('fieldset', {}, [el('legend', { text: 'Papel' })].concat(['onboarder', 'lideranca'].map(function (p) {
+        return el('label', { class: 'check' }, [el('input', { type: 'radio', name: 'u-papel', value: p, checked: f.papel === p, onchange: function () { f.papel = p; if (p === 'onboarder') f.segmentos = f.segmentos.slice(0, 1); desenhar(); } }), PAPEIS[p]]);
+      }))),
+      el('fieldset', {}, [el('legend', { text: f.papel === 'onboarder' ? 'Segmentação (uma)' : 'Segmentações' })].concat(ORDEM.map(function (s) {
+        return el('label', { class: 'check' }, [el('input', { type: f.papel === 'onboarder' ? 'radio' : 'checkbox', name: 'u-seg', value: s, checked: f.segmentos.indexOf(s) >= 0, onchange: function (e) {
+          if (f.papel === 'onboarder') f.segmentos = [s];
+          else if (e.target.checked) f.segmentos = ORDEM.filter(function (x) { return x === s || f.segmentos.indexOf(x) >= 0; });
+          else f.segmentos = f.segmentos.filter(function (x) { return x !== s; });
+        } }), s]);
+      }))),
+      el('fieldset', {}, [el('legend', { text: 'Permissões' }), el('label', { class: 'check' }, [el('input', { type: 'checkbox', checked: f.admin, onchange: function (e) { f.admin = e.target.checked; } }), 'Admin'])]),
+      el('div', { class: 'full actions' }, [el('button', { class: 'btn btn-primary', type: 'submit', text: 'Cadastrar' })])
+    ]),
+    el('section', { class: 'stack' }, [
+      el('h2', { class: 'h2', text: 'Todos (' + S.usuarios.length + ')' }),
+      el('div', { class: 'table-wrap' }, [el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['Nome', 'Papel', 'Segmentação', 'Liberado por', 'Status'].map(function (h) { return el('th', { text: h }); }))]),
+        el('tbody', {}, S.usuarios.map(function (u) {
+          return el('tr', {}, [
+            el('td', {}, [el('strong', { text: u.nome }), el('div', { class: 'muted', text: u.email })]),
+            el('td', { text: PAPEIS[u.papel] + (u.admin ? ' · Admin' : '') }),
+            el('td', { text: u.segmentos.join(' + ') }),
+            el('td', { class: 'muted', text: nome(u.liberadoPor) }),
+            el('td', { class: 'status', text: u.confirmadoEm ? 'Ativo' : 'Ainda não entrou' })
+          ]);
+        }))
+      ])])
+    ])
+  ]);
+}
+
+// ============ Início ============
+desenhar();
+chamar('apiEstado').then(function (estado) { S = estado; desenhar(); }).catch(function (e) {
+  document.getElementById('root').textContent = '';
+  document.getElementById('root').appendChild(telaSimples('Não foi possível carregar.', e.message));
 });
 </script>
 </body>

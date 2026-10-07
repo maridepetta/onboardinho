@@ -1,5 +1,9 @@
 # Onboardinho
 
+> **A plataforma agora é o Google Apps Script: veja [`apps-script/`](apps-script/README.md).**
+> A pasta `src/` (Next.js) é o protótipo anterior, mantido só como referência das telas e regras.
+
+
 Assistente para o time de onboarding acompanhar cada cliente com orientações e sugestões baseadas no manual do time.
 Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuários: onboarders e lideranças.
 
