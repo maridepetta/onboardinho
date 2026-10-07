@@ -3,43 +3,52 @@
 Assistente para o time de onboarding acompanhar cada cliente com orientações e sugestões baseadas no manual do time.
 Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuários: onboarders e lideranças.
 
-## O que já existe
+## Como o acesso funciona
 
-**Cadastro · passo 1 — Seu acesso** (`/onboarding`). Papel e segmentação **vêm da liberação**; o usuário só confirma.
+- **O admin cria cada usuário** já com papel (onboarder/liderança) e segmentações. A pessoa recebe convite, cria a senha e confirma o acesso.
+- **Ninguém escolhe o próprio acesso.** Se algo estiver errado, a pessoa pede ajuste.
+- **Quem decide os pedidos** (`src/lib/permissions.ts`, com testes):
+  - Admin decide qualquer pedido.
+  - Liderança decide só pedidos de segmentação, e só dentro das segmentações dela.
+  - Mudança de papel: só admin.
+  - Ninguém decide o próprio pedido.
 
-- Liberação ok → confirma e escolhe o nome de exibição.
-- Algo errado → pede ajuste (papel, segmentação ou outro) para quem libera e segue com o acesso atual.
-- Sem liberação → pede liberação e não avança.
+## Telas
+
+| Rota | Quem | O quê |
+| --- | --- | --- |
+| `/entrar` | todos | Login **simulado**: escolha com quem entrar |
+| `/primeiro-acesso` | quem acabou de ser criado | Criar senha → confirmar acesso (ou pedir ajuste) → início |
+| `/inicio` | todos | Página da pessoa (lista de clientes ainda por fazer) |
+| `/meu-acesso` | todos | Ver o acesso e pedir ajuste |
+| `/pedidos` | liderança e admin | Aprovar/recusar pedidos |
+| `/admin/usuarios` | admin | Criar usuários |
 
 ## Stack
 
-- [Next.js](https://nextjs.org) (App Router) + TypeScript
-- CSS Modules + variáveis CSS (`src/app/globals.css`)
+- [Next.js](https://nextjs.org) 16 (App Router) + TypeScript
+- CSS Modules + variáveis CSS — **a paleta inteira fica em `src/app/globals.css`**
 - Fontes: Archivo, IBM Plex Sans, IBM Plex Mono (via `next/font`)
 
 ## Rodando
 
 ```bash
 npm install
-npm run dev
+npm run dev   # http://localhost:3000
+npm test      # regras de permissão
+npm run lint
 ```
 
-Abra http://localhost:3000.
+## O que ainda é simulado
 
-## Dados simulados
+- **Banco**: `src/lib/store.ts` guarda tudo em memória e **zera quando o servidor reinicia**.
+- **Login**: `src/lib/session.ts` usa um cookie com o id do usuário escolhido em `/entrar`. A senha do primeiro acesso não é salva.
+- **Convite por e-mail**: não é enviado.
 
-Ainda não há login nem banco. O acesso vem de `src/lib/access.ts` (mock) e os pedidos/perfil de
-`src/app/onboarding/actions.ts` (só registram no console).
+Plano: trocar os três pelo [Supabase](https://supabase.com) (banco Postgres + login por e-mail/senha + convite pelo admin).
+As telas não mudam; só `store.ts` e `session.ts`.
 
-Em desenvolvimento, uma barra no topo troca o cenário (ou use `?cenario=`):
+## Próximos passos
 
-- `/onboarding?cenario=onboarder` — Onboarder, 7D
-- `/onboarding?cenario=lideranca` — Liderança, 6D + 7D
-- `/onboarding?cenario=sem-liberacao`
-
-## Próximos passos (decisões em aberto)
-
-1. **Login**: entrar com a conta da empresa (Google/Microsoft)? Se sim, nome e e-mail vêm do login.
-2. **Quem recebe o pedido de ajuste/liberação** e em quanto tempo responde.
-3. **Banco + permissões**: liberação (papel + segmentações) guardada no banco, restringindo o que cada pessoa vê.
-4. Passos 2 (Carteira) e 3 (Preferências).
+1. Supabase (precisa de uma conta e das chaves do projeto).
+2. Tela principal: lista de clientes com etapa e próxima ação sugerida pelo manual.

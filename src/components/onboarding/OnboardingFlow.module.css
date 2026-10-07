@@ -13,22 +13,6 @@
   letter-spacing: 0.06em;
 }
 
-/* Barra de cenários — só em desenvolvimento */
-.devBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 8px var(--gutter);
-  background: var(--ink);
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-}
-
-.devBar a:hover {
-  color: var(--lime);
-}
-
 /* Cabeçalho */
 .header {
   display: flex;
@@ -198,7 +182,7 @@
 }
 
 /* Pedido de ajuste */
-.reasonGrid {
+.choiceGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
@@ -241,7 +225,53 @@
   font-size: 28px;
 }
 
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  margin-bottom: 16px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.notice,
+.error {
+  margin: 0;
+  max-width: 760px;
+  padding: 16px 20px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.notice {
+  border: 2px solid var(--lime);
+}
+
+.error {
+  background: var(--white);
+  color: var(--danger);
+  font-weight: 600;
+}
+
 /* Campos */
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 32px;
+  max-width: 900px;
+}
+
+.hint {
+  font-size: 14px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -307,6 +337,7 @@
 .ghost,
 .primary {
   display: inline-flex;
+  text-decoration: none;
   align-items: center;
   gap: 10px;
   height: 56px;
@@ -335,4 +366,9 @@
 .primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Na tela azul o foco é limão (cobalto some no fundo). */
+.page :focus-visible {
+  outline-color: var(--lime);
 }

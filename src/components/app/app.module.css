@@ -1,0 +1,374 @@
+/* Páginas internas: fundo claro, mesma tipografia e cores do primeiro acesso. */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+  padding: 20px var(--gutter);
+  background: var(--ink);
+  color: var(--white);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  text-decoration: none;
+}
+
+.brandMark {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.navLink,
+.navOn {
+  padding: 10px 14px;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* No celular o menu ganha linha própria, rolando na horizontal se não couber. */
+@media (max-width: 720px) {
+  .topbar {
+    justify-content: space-between;
+  }
+
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}
+
+.navLink:hover {
+  color: var(--lime);
+}
+
+.navOn {
+  background: var(--white);
+  color: var(--ink);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 15px;
+}
+
+.linkButton {
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.content {
+  width: 100%;
+  max-width: 1240px;
+  padding: 48px var(--gutter) 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Tipografia */
+
+.kicker {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-stretch: 112%;
+  font-weight: 900;
+  font-size: clamp(36px, 4.5vw, 64px);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+
+.h2 {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+}
+
+.lead {
+  margin: 0;
+  max-width: 680px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Chips de segmentação */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+/* Blocos */
+
+.panel {
+  padding: 28px;
+  border: 2px solid var(--ink);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty {
+  padding: 40px 28px;
+  border: 2px dashed var(--line);
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.banner {
+  padding: 16px 20px;
+  border-left: 0;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 16px;
+}
+
+.success {
+  padding: 16px 20px;
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.error {
+  padding: 16px 20px;
+  background: var(--danger);
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* Tabela */
+
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--white);
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.table th {
+  padding: 12px 20px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+  color: var(--ink-soft);
+}
+
+.table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.status {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+/* Formulário */
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label,
+.fieldset legend {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input {
+  height: 48px;
+  padding: 0 14px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--white);
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.fieldset legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--cobalt);
+}
+
+.formFull {
+  grid-column: 1 / -1;
+}
+
+/* Botões */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--cobalt);
+  border-color: var(--cobalt);
+  color: var(--white);
+}
+
+.secondary {
+  background: var(--white);
+  color: var(--ink);
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Entrar (simulado) */
+
+.userList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.userButton {
+  width: 100%;
+  min-height: 112px;
+  padding: 20px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--white);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.userButton:hover {
+  background: var(--lime);
+}

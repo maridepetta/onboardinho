@@ -2,65 +2,90 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ROLE_LABEL, SCENARIOS, SEGMENTS, type Access } from "@/lib/access";
 import {
-  createProfile,
-  requestAccessChange,
-  type AdjustReason,
-} from "@/app/onboarding/actions";
+  ROLES,
+  ROLE_LABEL,
+  SEGMENTS,
+  type RequestKind,
+  type Role,
+  type Segment,
+} from "@/lib/domain";
+import { confirmAccess, requestChange } from "@/app/actions";
+import { ArrowIcon, LockIcon, TrendIcon } from "@/components/icons";
 import styles from "./OnboardingFlow.module.css";
 
-type Screen = "access" | "adjust" | "sent" | "name" | "done";
+// "primeiro-acesso": criar senha → confirmar acesso → início.
+// "meu-acesso": ver o acesso e pedir ajuste depois do primeiro acesso.
+type Mode = "primeiro-acesso" | "meu-acesso";
+type Screen = "senha" | "access" | "adjust" | "sent";
 
-const REASONS: { id: AdjustReason; key: string; label: string }[] = [
-  { id: "papel", key: "A", label: "Papel" },
-  { id: "segmentacao", key: "B", label: "Segmentação" },
-  { id: "outro", key: "C", label: "Outra coisa" },
-];
+export type FlowUser = {
+  name: string;
+  email: string;
+  role: Role;
+  segments: Segment[];
+  grantedBy: string;
+  grantedAt: string;
+};
+
+const MIN_PASSWORD = 8;
 
 export function OnboardingFlow({
-  access,
-  showScenarioSwitcher,
+  mode,
+  user,
+  pendingRequest,
 }: {
-  access: Access;
-  showScenarioSwitcher: boolean;
+  mode: Mode;
+  user: FlowUser;
+  pendingRequest: string | null;
 }) {
-  const { user, grant } = access;
-  const [screen, setScreen] = useState<Screen>("access");
-  const [reason, setReason] = useState<AdjustReason>("segmentacao");
-  const [details, setDetails] = useState("");
-  const [displayName, setDisplayName] = useState(user.name);
+  const [screen, setScreen] = useState<Screen>(mode === "primeiro-acesso" ? "senha" : "access");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [kind, setKind] = useState<RequestKind>("segmentacao");
+  const [wantedRole, setWantedRole] = useState<Role>(
+    ROLES.find((r) => r !== user.role) ?? user.role,
+  );
+  const [wantedSegments, setWantedSegments] = useState<Segment[]>(user.segments);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const step = screen === "name" || screen === "done" ? 1 : 0;
+  const firstName = user.name.split(" ")[0];
+  const grantedAt = new Date(user.grantedAt).toLocaleDateString("pt-BR");
+  const passwordOk = password.length >= MIN_PASSWORD && password === password2;
+  const segmentsChanged = wantedSegments.join() !== user.segments.join();
+  const canSend = kind === "papel" ? wantedRole !== user.role : wantedSegments.length > 0 && segmentsChanged;
 
-  function sendRequest() {
+  function toggleSegment(code: Segment) {
+    setWantedSegments((cur) =>
+      SEGMENTS.map((s) => s.code).filter((c) => (c === code ? !cur.includes(c) : cur.includes(c))),
+    );
+  }
+
+  function confirm() {
+    startTransition(() => confirmAccess());
+  }
+
+  function send() {
+    setError(null);
     startTransition(async () => {
-      await requestAccessChange({ reason: grant ? reason : "sem-liberacao", details });
-      setScreen("sent");
+      const result = await requestChange({
+        kind,
+        role: wantedRole,
+        segments: wantedSegments,
+        note,
+      });
+      if (result.ok) setScreen("sent");
+      else setError(result.error);
     });
   }
 
-  function submitProfile() {
-    startTransition(async () => {
-      await createProfile({ displayName: displayName.trim() });
-      setScreen("done");
-    });
-  }
+  const steps = mode === "primeiro-acesso" ? ["senha", "access"] : [];
+  const step = screen === "senha" ? 0 : 1;
 
   return (
     <div className={styles.page}>
-      {showScenarioSwitcher && (
-        <nav className={styles.devBar} aria-label="Cenários simulados">
-          <span>DADOS SIMULADOS ·</span>
-          {SCENARIOS.map((s) => (
-            <Link key={s} href={`/onboarding?cenario=${s}`}>
-              {s}
-            </Link>
-          ))}
-        </nav>
-      )}
-
       <header className={styles.header}>
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">
@@ -69,23 +94,66 @@ export function OnboardingFlow({
           <span className={styles.brandName}>Trilho</span>
         </div>
         <div className={styles.headerMeta}>
-          <span className={styles.mono}>PASSO 1 DE 3 · SEU ACESSO</span>
+          <span className={styles.mono}>
+            {mode === "primeiro-acesso" ? "PRIMEIRO ACESSO" : "MEU ACESSO"}
+          </span>
           <span className={styles.emailTag}>{user.email}</span>
         </div>
       </header>
 
-      <div className={styles.progress} aria-hidden="true">
-        {[0, 1].map((i) => (
-          <div key={i} className={i <= step ? styles.barOn : styles.bar} />
-        ))}
-      </div>
+      {steps.length > 0 && (
+        <div className={styles.progress} aria-hidden="true">
+          {steps.map((s, i) => (
+            <div key={s} className={i <= step ? styles.barOn : styles.bar} />
+          ))}
+        </div>
+      )}
 
       <main className={styles.main}>
-        {screen === "access" && grant && (
+        {screen === "senha" && (
           <section className={styles.block}>
-            <Heading kicker={`OI, ${user.name.toUpperCase()}`} title="Seu acesso já está liberado.">
-              Confira se está certo. Papel e segmentação vêm da sua liberação e só quem libera
-              pode alterar.
+            <Heading kicker={`OI, ${firstName.toUpperCase()}`} title="Crie sua senha.">
+              Seu usuário já foi criado. Falta só a senha para entrar.
+            </Heading>
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <label htmlFor="senha">Senha</label>
+                <input
+                  id="senha"
+                  type="password"
+                  autoComplete="new-password"
+                  className={styles.bigInput}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <span className={styles.hint}>Mínimo de {MIN_PASSWORD} caracteres.</span>
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="senha2">Repita a senha</label>
+                <input
+                  id="senha2"
+                  type="password"
+                  autoComplete="new-password"
+                  className={styles.bigInput}
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                />
+                {password2 !== "" && password !== password2 && (
+                  <span className={styles.hint}>As senhas não são iguais.</span>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {screen === "access" && (
+          <section className={styles.block}>
+            <Heading
+              kicker={`OI, ${firstName.toUpperCase()}`}
+              title={mode === "primeiro-acesso" ? "Seu acesso já está liberado." : "Seu acesso."}
+            >
+              Papel e segmentação vêm da sua liberação. Se algo estiver errado, peça ajuste: o
+              pedido vai para a liderança.
             </Heading>
 
             <ul className={styles.grantGrid}>
@@ -94,10 +162,10 @@ export function OnboardingFlow({
                   PAPEL
                   <LockIcon />
                 </span>
-                <span className={styles.roleValue}>{ROLE_LABEL[grant.role]}</span>
+                <span className={styles.roleValue}>{ROLE_LABEL[user.role]}</span>
               </li>
               {SEGMENTS.map((s) => {
-                const granted = grant.segments.includes(s.code);
+                const granted = user.segments.includes(s.code);
                 return (
                   <li key={s.code} className={granted ? styles.cardOn : styles.cardOff}>
                     <span className={styles.cardTop}>
@@ -112,87 +180,78 @@ export function OnboardingFlow({
             </ul>
 
             <p className={styles.mono}>
-              LIBERADO POR {grant.grantedBy.toUpperCase()} · {grant.grantedAt.toUpperCase()}
+              LIBERADO POR {user.grantedBy.toUpperCase()} · {grantedAt}
             </p>
-          </section>
-        )}
-
-        {screen === "access" && !grant && (
-          <section className={styles.block}>
-            <Heading
-              kicker={`OI, ${user.name.toUpperCase()}`}
-              title="Seu acesso ainda não foi liberado."
-            >
-              Sem liberação, não dá para ver clientes nem orientações. Peça agora e avisamos por
-              e-mail quando estiver pronto.
-            </Heading>
+            {pendingRequest && (
+              <p className={styles.notice}>Pedido aguardando resposta: {pendingRequest}</p>
+            )}
           </section>
         )}
 
         {screen === "adjust" && (
           <section className={styles.block}>
             <Heading kicker="PEDIR AJUSTE" title="O que está diferente?" />
-            <div className={styles.reasonGrid} role="group" aria-label="Motivo do ajuste">
-              {REASONS.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  aria-pressed={reason === r.id}
-                  className={reason === r.id ? styles.tileOn : styles.tile}
-                  onClick={() => setReason(r.id)}
-                >
-                  <span className={styles.keyCap}>{r.key}</span>
-                  <span className={styles.tileLabel}>{r.label}</span>
-                </button>
-              ))}
+            <div className={styles.choiceGrid} role="group" aria-label="O que mudar">
+              <Tile on={kind === "segmentacao"} k="A" onClick={() => setKind("segmentacao")}>
+                Segmentação
+              </Tile>
+              <Tile on={kind === "papel"} k="B" onClick={() => setKind("papel")}>
+                Papel
+              </Tile>
             </div>
+
+            {kind === "segmentacao" ? (
+              <fieldset className={styles.fieldset}>
+                <legend>Quais segmentações você deveria ter?</legend>
+                <div className={styles.choiceGrid}>
+                  {SEGMENTS.map((s) => (
+                    <Tile
+                      key={s.code}
+                      on={wantedSegments.includes(s.code)}
+                      k={s.code}
+                      onClick={() => toggleSegment(s.code)}
+                    >
+                      {s.levels}
+                    </Tile>
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <fieldset className={styles.fieldset}>
+                <legend>Qual deveria ser o seu papel?</legend>
+                <div className={styles.choiceGrid}>
+                  {ROLES.map((r) => (
+                    <Tile key={r} on={wantedRole === r} k={r === user.role ? "ATUAL" : "NOVO"} onClick={() => setWantedRole(r)}>
+                      {ROLE_LABEL[r]}
+                    </Tile>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
             <div className={styles.field}>
-              <label htmlFor="detalhes">Conte o que precisa mudar</label>
+              <label htmlFor="nota">Quer explicar? (opcional)</label>
               <textarea
-                id="detalhes"
-                rows={3}
-                placeholder="Ex.: atendo clientes 7D e 8D"
+                id="nota"
+                rows={2}
+                maxLength={500}
                 className={styles.textarea}
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
               />
             </div>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
           </section>
         )}
 
         {screen === "sent" && (
           <section className={styles.block}>
-            <Heading kicker="PEDIDO ENVIADO" title="Enviado para [responsável pela liberação].">
-              {grant
-                ? "Enquanto o ajuste não sai, você segue com o acesso atual."
-                : "Avisaremos por e-mail assim que seu acesso for liberado."}
-            </Heading>
-          </section>
-        )}
-
-        {screen === "name" && grant && (
-          <section className={styles.block}>
-            <Heading
-              kicker={`${ROLE_LABEL[grant.role].toUpperCase()} · ${grant.segments.join(" + ")}`}
-              title="Como você quer ser chamado?"
-            />
-            <div className={styles.field}>
-              <label htmlFor="nome">Nome de exibição</label>
-              <input
-                id="nome"
-                type="text"
-                className={styles.bigInput}
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-          </section>
-        )}
-
-        {screen === "done" && (
-          <section className={styles.block}>
-            <Heading kicker="PERFIL CRIADO" title={`Tudo certo, ${displayName.trim()}.`}>
-              Próximo passo: sua carteira de clientes.
+            <Heading kicker="PEDIDO ENVIADO" title="Enviado para a liderança.">
+              Enquanto o ajuste não sai, você segue com o acesso atual.
             </Heading>
           </section>
         )}
@@ -200,38 +259,43 @@ export function OnboardingFlow({
 
       <footer className={styles.footer}>
         <div>
-          {(screen === "adjust" || screen === "name") && (
+          {screen === "adjust" && (
             <button type="button" className={styles.ghost} onClick={() => setScreen("access")}>
               <ArrowIcon flip />
               Voltar
             </button>
           )}
+          {mode === "meu-acesso" && screen !== "adjust" && (
+            <Link href="/inicio" className={styles.ghost}>
+              <ArrowIcon flip />
+              Início
+            </Link>
+          )}
         </div>
         <div className={styles.actions}>
-          {screen === "access" && grant && (
-            <>
-              <button type="button" className={styles.ghost} onClick={() => setScreen("adjust")}>
-                Algo está errado
-              </button>
-              <Primary onClick={() => setScreen("name")}>Está certo, continuar</Primary>
-            </>
+          {screen === "senha" && (
+            <Primary onClick={() => setScreen("access")} disabled={!passwordOk}>
+              Continuar
+            </Primary>
           )}
-          {screen === "access" && !grant && (
-            <Primary onClick={sendRequest} disabled={pending}>
-              Pedir liberação
+          {screen === "access" && !pendingRequest && (
+            <button type="button" className={styles.ghost} onClick={() => setScreen("adjust")}>
+              Algo está errado
+            </button>
+          )}
+          {screen === "access" && mode === "primeiro-acesso" && (
+            <Primary onClick={confirm} disabled={pending}>
+              Está certo, entrar
             </Primary>
           )}
           {screen === "adjust" && (
-            <Primary onClick={sendRequest} disabled={pending || details.trim() === ""}>
+            <Primary onClick={send} disabled={pending || !canSend}>
               Enviar pedido
             </Primary>
           )}
-          {screen === "sent" && grant && (
-            <Primary onClick={() => setScreen("name")}>Continuar com o acesso atual</Primary>
-          )}
-          {screen === "name" && (
-            <Primary onClick={submitProfile} disabled={pending || displayName.trim() === ""}>
-              Criar perfil
+          {screen === "sent" && mode === "primeiro-acesso" && (
+            <Primary onClick={confirm} disabled={pending}>
+              Entrar com o acesso atual
             </Primary>
           )}
         </div>
@@ -258,6 +322,30 @@ function Heading({
   );
 }
 
+function Tile({
+  on,
+  k,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  k: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      className={on ? styles.tileOn : styles.tile}
+      onClick={onClick}
+    >
+      <span className={styles.keyCap}>{k}</span>
+      <span className={styles.tileLabel}>{children}</span>
+    </button>
+  );
+}
+
 function Primary({
   children,
   onClick,
@@ -272,59 +360,5 @@ function Primary({
       {children}
       <ArrowIcon />
     </button>
-  );
-}
-
-function ArrowIcon({ flip }: { flip?: boolean }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="square"
-      aria-hidden="true"
-      style={flip ? { transform: "scaleX(-1)" } : undefined}
-    >
-      <path d="M5 12 H19" />
-      <path d="M13 6 L19 12 L13 18" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.25"
-      strokeLinecap="square"
-      aria-hidden="true"
-    >
-      <rect x="5" y="11" width="14" height="10" />
-      <path d="M8 11 V7 A4 4 0 0 1 16 7 V11" />
-    </svg>
-  );
-}
-
-function TrendIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="square"
-    >
-      <path d="M4 18 L10 12 L14 15 L20 6" />
-      <path d="M15 6 H20 V11" />
-    </svg>
   );
 }

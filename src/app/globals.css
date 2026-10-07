@@ -1,8 +1,13 @@
+/* Cores e espaçamentos do produto. Trocar a paleta = mexer só aqui. */
 :root {
   --ink: #0b0f19;
+  --ink-soft: #4b5263;
   --white: #ffffff;
+  --paper: #f3f4f1;
+  --line: #c9ccc4;
   --cobalt: #2f4bff;
   --lime: #c6f432;
+  --danger: #b42318;
   --muted-on-cobalt: rgba(255, 255, 255, 0.35);
   --placeholder-on-cobalt: #b8c3ff;
 
@@ -20,8 +25,8 @@ body {
 }
 
 body {
-  background: var(--cobalt);
-  color: var(--white);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-body), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -32,11 +37,12 @@ a {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
 
 :focus-visible {
-  outline: 3px solid var(--lime);
+  outline: 3px solid var(--cobalt);
   outline-offset: 3px;
 }
