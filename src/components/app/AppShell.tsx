@@ -1,9 +1,8 @@
 import Link from "next/link";
-import type { User } from "@/lib/domain";
+import { ROLE_LABEL, type User } from "@/lib/domain";
 import { canDecide, canManageUsers, canReviewRequests } from "@/lib/permissions";
 import { listRequests } from "@/lib/store";
 import { signOut } from "@/app/actions";
-import { TrendIcon } from "@/components/icons";
 import styles from "./app.module.css";
 
 type Section = "inicio" | "meu-acesso" | "pedidos" | "usuarios";
@@ -37,10 +36,7 @@ export async function AppShell({
     <div className={styles.shell}>
       <header className={styles.topbar}>
         <Link href="/inicio" className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            <TrendIcon />
-          </span>
-          Trilho
+          Assistente de Onboarding
         </Link>
         <nav aria-label="Principal" className={styles.nav}>
           {links
@@ -57,7 +53,9 @@ export async function AppShell({
             ))}
         </nav>
         <form action={signOut} className={styles.who}>
-          <span>{user.name}</span>
+          <span>
+            {user.name} · {user.isAdmin ? "Admin" : ROLE_LABEL[user.role]}
+          </span>
           <button type="submit" className={styles.linkButton}>
             Sair
           </button>

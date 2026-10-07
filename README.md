@@ -1,4 +1,4 @@
-# Trilho — assistente do time de onboarding
+# Assistente de Onboarding (Onboardinho)
 
 Assistente para o time de onboarding acompanhar cada cliente com orientações e sugestões baseadas no manual do time.
 Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuários: onboarders e lideranças.
@@ -28,7 +28,8 @@ Segmentações: **6D** (clientes N2/N3), **7D** (N4/N5) e **8D** (N6+). Usuário
 
 - [Next.js](https://nextjs.org) 16 (App Router) + TypeScript
 - CSS Modules + variáveis CSS — **a paleta inteira fica em `src/app/globals.css`**
-- Fontes: Archivo, IBM Plex Sans, IBM Plex Mono (via `next/font`)
+- Design system **Modernist** (handoff do Claude Design em `docs/design/`): Archivo, raio 0, vermelho `#ec3013`
+  - Ajuste de acessibilidade: botões usam `#d02a11` (texto claro sobre `#ec3013` tem contraste 3.76, abaixo do mínimo 4.5)
 
 ## Rodando
 
@@ -51,4 +52,4 @@ As telas não mudam; só `store.ts` e `session.ts`.
 ## Próximos passos
 
 1. Supabase (precisa de uma conta e das chaves do projeto).
-2. Tela principal: lista de clientes com etapa e próxima ação sugerida pelo manual.
+2. Tela principal (design `docs/design/handoff.md`, direções 2a/2b/2c): pipeline por etapa e orientações do manual.

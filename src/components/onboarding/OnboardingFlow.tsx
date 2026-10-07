@@ -11,7 +11,7 @@ import {
   type Segment,
 } from "@/lib/domain";
 import { confirmAccess, requestChange } from "@/app/actions";
-import { ArrowIcon, LockIcon, TrendIcon } from "@/components/icons";
+import { ArrowIcon, LockIcon } from "@/components/icons";
 import styles from "./OnboardingFlow.module.css";
 
 // "primeiro-acesso": criar senha → confirmar acesso → início.
@@ -87,17 +87,10 @@ export function OnboardingFlow({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            <TrendIcon />
-          </span>
-          <span className={styles.brandName}>Trilho</span>
-        </div>
+        <span className={styles.brand}>Assistente de Onboarding</span>
         <div className={styles.headerMeta}>
-          <span className={styles.mono}>
-            {mode === "primeiro-acesso" ? "PRIMEIRO ACESSO" : "MEU ACESSO"}
-          </span>
-          <span className={styles.emailTag}>{user.email}</span>
+          <span>{mode === "primeiro-acesso" ? "Primeiro acesso" : "Meu acesso"}</span>
+          <span>{user.email}</span>
         </div>
       </header>
 
@@ -112,7 +105,7 @@ export function OnboardingFlow({
       <main className={styles.main}>
         {screen === "senha" && (
           <section className={styles.block}>
-            <Heading kicker={`OI, ${firstName.toUpperCase()}`} title="Crie sua senha.">
+            <Heading kicker={`Oi, ${firstName}`} title="Crie sua senha.">
               Seu usuário já foi criado. Falta só a senha para entrar.
             </Heading>
             <div className={styles.fieldRow}>
@@ -122,7 +115,7 @@ export function OnboardingFlow({
                   id="senha"
                   type="password"
                   autoComplete="new-password"
-                  className={styles.bigInput}
+                  className={styles.input}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -134,12 +127,12 @@ export function OnboardingFlow({
                   id="senha2"
                   type="password"
                   autoComplete="new-password"
-                  className={styles.bigInput}
+                  className={styles.input}
                   value={password2}
                   onChange={(e) => setPassword2(e.target.value)}
                 />
                 {password2 !== "" && password !== password2 && (
-                  <span className={styles.hint}>As senhas não são iguais.</span>
+                  <span className={styles.hintError}>As senhas não são iguais.</span>
                 )}
               </div>
             </div>
@@ -149,7 +142,7 @@ export function OnboardingFlow({
         {screen === "access" && (
           <section className={styles.block}>
             <Heading
-              kicker={`OI, ${firstName.toUpperCase()}`}
+              kicker={`Oi, ${firstName}`}
               title={mode === "primeiro-acesso" ? "Seu acesso já está liberado." : "Seu acesso."}
             >
               Papel e segmentação vêm da sua liberação. Se algo estiver errado, peça ajuste: o
@@ -173,14 +166,14 @@ export function OnboardingFlow({
                       <LockIcon />
                     </span>
                     <span className={styles.segCode}>{s.code}</span>
-                    <span className={styles.mono}>{s.levels.toUpperCase()}</span>
+                    <span className={styles.levels}>{s.levels}</span>
                   </li>
                 );
               })}
             </ul>
 
-            <p className={styles.mono}>
-              LIBERADO POR {user.grantedBy.toUpperCase()} · {grantedAt}
+            <p className={styles.kickerSmall}>
+              Liberado por {user.grantedBy} · {grantedAt}
             </p>
             {pendingRequest && (
               <p className={styles.notice}>Pedido aguardando resposta: {pendingRequest}</p>
@@ -190,7 +183,7 @@ export function OnboardingFlow({
 
         {screen === "adjust" && (
           <section className={styles.block}>
-            <Heading kicker="PEDIR AJUSTE" title="O que está diferente?" />
+            <Heading kicker="Pedir ajuste" title="O que está diferente?" />
             <div className={styles.choiceGrid} role="group" aria-label="O que mudar">
               <Tile on={kind === "segmentacao"} k="A" onClick={() => setKind("segmentacao")}>
                 Segmentação
@@ -221,7 +214,7 @@ export function OnboardingFlow({
                 <legend>Qual deveria ser o seu papel?</legend>
                 <div className={styles.choiceGrid}>
                   {ROLES.map((r) => (
-                    <Tile key={r} on={wantedRole === r} k={r === user.role ? "ATUAL" : "NOVO"} onClick={() => setWantedRole(r)}>
+                    <Tile key={r} on={wantedRole === r} k={r === user.role ? "Atual" : "Novo"} onClick={() => setWantedRole(r)}>
                       {ROLE_LABEL[r]}
                     </Tile>
                   ))}
@@ -250,7 +243,7 @@ export function OnboardingFlow({
 
         {screen === "sent" && (
           <section className={styles.block}>
-            <Heading kicker="PEDIDO ENVIADO" title="Enviado para a liderança.">
+            <Heading kicker="Pedido enviado" title="Enviado para a liderança.">
               Enquanto o ajuste não sai, você segue com o acesso atual.
             </Heading>
           </section>

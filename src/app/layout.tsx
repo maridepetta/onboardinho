@@ -1,36 +1,22 @@
 import type { Metadata } from "next";
-import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 
+// Design system Modernist: Archivo em tudo (400, 600, 800).
 const archivo = Archivo({
-  variable: "--font-display",
+  variable: "--font-archivo",
   subsets: ["latin"],
-  axes: ["wdth"],
-});
-
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["500"],
+  weight: ["400", "600", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "Trilho",
-  description: "Assistente do time de onboarding",
+  title: "Assistente de Onboarding",
+  description: "Orientações do manual do time no momento certo de cada cliente",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable}`}
-    >
+    <html lang="pt-BR" className={archivo.variable}>
       <body>{children}</body>
     </html>
   );

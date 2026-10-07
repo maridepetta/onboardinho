@@ -1,17 +1,37 @@
-/* Cores e espaçamentos do produto. Trocar a paleta = mexer só aqui. */
+/*
+ * Tokens do design system Modernist (handoff do Claude Design).
+ * Trocar a paleta = mexer só aqui.
+ */
 :root {
-  --ink: #0b0f19;
-  --ink-soft: #4b5263;
-  --white: #ffffff;
-  --paper: #f3f4f1;
-  --line: #c9ccc4;
-  --cobalt: #2f4bff;
-  --lime: #c6f432;
-  --danger: #b42318;
-  --muted-on-cobalt: rgba(255, 255, 255, 0.35);
-  --placeholder-on-cobalt: #b8c3ff;
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201e1d;
+  --color-accent: #ec3013;
+  --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
 
-  --gutter: clamp(20px, 5vw, 72px);
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+
+  --color-accent-100: #fff2ef;
+  --color-accent-400: #ff9783;
+  --color-accent-700: #ae1800;
+  --color-accent-800: #7c1405;
+
+  /*
+   * Ajustes de acessibilidade sobre o DS original:
+   * - texto claro sobre #ec3013 tem contraste 3.76 (mínimo 4.5 para 14–17px).
+   *   Botões e seleções usam #d02a11 (4.67), visualmente quase igual.
+   * - borda do input a 40% tem 2.38 contra o surface (mínimo 3); usa neutral-600.
+   */
+  --color-action: #d02a11;
+  --color-action-hover: #ae1800;
+  --color-action-active: #7c1405;
+  --color-field-border: var(--color-neutral-600);
+
+  --gutter: clamp(16px, 3.2vw, 40px);
 }
 
 * {
@@ -25,14 +45,17 @@ body {
 }
 
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-body), sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: inherit;
+  color: var(--color-accent-700);
+  text-underline-offset: 3px;
 }
 
 button,
@@ -42,7 +65,15 @@ textarea {
   font: inherit;
 }
 
+:focus {
+  outline: none;
+}
+
 :focus-visible {
-  outline: 3px solid var(--cobalt);
-  outline-offset: 3px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }

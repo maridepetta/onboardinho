@@ -6,7 +6,7 @@ import { listUsers } from "@/lib/store";
 import { signInAs } from "@/app/actions";
 import styles from "@/components/app/app.module.css";
 
-export const metadata: Metadata = { title: "Entrar · Trilho" };
+export const metadata: Metadata = { title: "Entrar · Assistente de Onboarding" };
 
 // Login SIMULADO: escolha com quem entrar. Vira e-mail + senha com o Supabase.
 export default function EntrarPage() {

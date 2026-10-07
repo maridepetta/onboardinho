@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/session";
 import { listRequests } from "@/lib/store";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
-export const metadata: Metadata = { title: "Meu acesso · Trilho" };
+export const metadata: Metadata = { title: "Meu acesso · Assistente de Onboarding" };
 
 export default function MeuAcessoPage() {
   return (

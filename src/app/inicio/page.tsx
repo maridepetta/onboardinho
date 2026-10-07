@@ -7,7 +7,7 @@ import { listRequests } from "@/lib/store";
 import { AppShell } from "@/components/app/AppShell";
 import styles from "@/components/app/app.module.css";
 
-export const metadata: Metadata = { title: "Início · Trilho" };
+export const metadata: Metadata = { title: "Início · Assistente de Onboarding" };
 
 export default function InicioPage() {
   return (
