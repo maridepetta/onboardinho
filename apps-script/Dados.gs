@@ -8,9 +8,13 @@ var ABAS = {
   // hotmart_id se chamava id_externo: planilhas antigas continuam valendo (veja APELIDOS_COLUNA).
   // etapa_origem / owner_origem: último valor que veio do Salesforce, para a importação não desfazer
   // o que foi mudado no app (só aplica quando o Salesforce muda).
-  Clientes: ['hotmart_id', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde', 'link_analise']
-    .concat(CAMPOS_INFO.map(function (c) { return c[1]; }))
-    .concat(['etapa_origem', 'owner_origem', 'atualizado_em']),
+  // Escrito por extenso (sem usar CAMPOS_INFO do Regras.gs): no carregamento, a ordem dos arquivos
+  // não é garantida. O meio da lista são as colunas de CAMPOS_INFO (um teste confere).
+  Clientes: ['hotmart_id', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde', 'link_analise',
+    'closed_date', 'onboarding_health', 'health_reason', 'welcome_status', 'gmv_pos_fechamento',
+    'valor_1_3_meses', 'valor_12_meses', 'plataforma_atual', 'taxa_atual', 'criado_por', 'hotmart_event',
+    'inbound_campaign', 'lead_flow', 'estrategia',
+    'etapa_origem', 'owner_origem', 'atualizado_em'],
   Historico: ['quando', 'hotmart_id', 'cliente', 'de', 'para', 'por', 'origem'],
   Orientacoes: ['id', 'titulo', 'descricao', 'escopo', 'segmento', 'cliente', 'etapa', 'ref_manual',
     'prioridade', 'origem', 'status', 'criado_por', 'criado_em', 'concluida_por', 'concluida_em'],

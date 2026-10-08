@@ -466,3 +466,18 @@ test("responsável: liderança do segmento escolhe ou tira; precisa ser onboarde
   como(DONA);
   app.apiAdicionarCliente({ nome: "Sem ninguém", segmento: "8D", responsavelEmail: "", etapa: "Welcome", desde: "2026-10-01" });
 });
+
+test("os arquivos carregam em qualquer ordem (o Apps Script usa a ordem de criação no editor)", () => {
+  const nomes = ["Regras.gs", "Dados.gs", "Code.gs"];
+  const ordens = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+  for (const ordem of ordens) {
+    const fakes = createGoogleFakes({ owner: DONA, email: DONA });
+    const ctx = vm.createContext({ ...fakes.services });
+    ordem.forEach((i) => vm.runInContext(GS[i], ctx, { filename: nomes[i] }));
+    assert.equal((ctx as Record<string, () => { tela: string }>).apiEstado().tela, "app", ordem.map((i) => nomes[i]).join(" → "));
+  }
+  // A lista de colunas escrita por extenso no Dados.gs tem todas as de CAMPOS_INFO.
+  const { app } = novoApp();
+  const colunas: string[] = app.ABAS.Clientes;
+  for (const c of app.CAMPOS_INFO) assert.ok(colunas.includes(c[1]), c[1]);
+});

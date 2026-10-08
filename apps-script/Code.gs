@@ -379,10 +379,13 @@ var PROP_SINCRONIZACAO_ATIVA = 'SINCRONIZACAO_ATIVA';
 
 /**
  * Quais colunas viram o quê. [campo, nomes exatos (achatados), pedaços para "contém"]
+ * É função (e não uma lista pronta) porque usa CAMPOS_INFO, do Regras.gs: o Apps Script carrega
+ * os arquivos na ordem em que foram criados, e no carregamento o Regras.gs pode ainda não existir.
  * Primeiro tenta o nome exato em todos os campos; depois "contém" (ex.: "E-mail do responsável").
  * A ordem importa: "Data da etapa" é data, não etapa.
  */
-var COLUNAS_IMPORTACAO = [
+function colunasImportacao_() {
+  return [
   ['responsavel', ['responsavel', 'responsavelemail', 'emailresponsavel', 'emaildoresponsavel', 'onboarder', 'owner', 'ownername', 'opportunityownername', 'csm', 'analista', 'email', 'dono'], ['responsavel', 'onboarder']],
   ['idExterno', ['hotmartid', 'idhotmart', 'hotmart', 'idexterno', 'id', 'codigo', 'cod', 'idcliente', 'iddocliente', 'codigocliente', 'codigodocliente'], ['hotmartid', 'codigo']],
   ['segmento', ['segmento', 'seg', 'segmentacao', 'nivel', 'tier', 'faixa'], ['segment', 'nivel']],
@@ -390,16 +393,17 @@ var COLUNAS_IMPORTACAO = [
   ['etapa', ['etapa', 'fase', 'status', 'stage', 'etapaatual', 'faseatual', 'onboardingstatus'], ['etapa', 'fase']],
   ['linkAnalise', ['link', 'linkanalise', 'linkdaanalise', 'analise', 'notebook'], ['link']],
   ['nome', ['nome', 'name', 'cliente', 'nomecliente', 'nomedocliente', 'empresa', 'razaosocial', 'conta', 'account', 'accountname', 'opportunityname', 'nomefantasia', 'nomedaempresa'], ['cliente', 'empresa', 'nome']]
-].concat(CAMPOS_INFO.map(function (c) { return [c[0], c[3], []]; }));
+  ].concat(CAMPOS_INFO.map(function (c) { return [c[0], c[3], []]; }));
+}
 
-var ROTULOS_IMPORTACAO = (function () {
+function rotulosImportacao_() {
   var r = {
     nome: 'Nome', idExterno: 'Hotmart ID', segmento: 'Segmento', responsavel: 'Responsável',
     etapa: 'Etapa', desde: 'Na etapa desde', linkAnalise: 'Link da análise'
   };
   CAMPOS_INFO.forEach(function (c) { r[c[0]] = c[2]; });
   return r;
-})();
+}
 
 /** Texto colado (do Sheets/Excel: separado por tab; CSV: vírgula ou ponto e vírgula) → linhas. */
 function lerTextoColado_(texto) {
@@ -431,7 +435,7 @@ function mapearColunas_(cabecalho) {
   var usadas = {};
   var chaves = cabecalho.map(chave_);
   [1, 2].forEach(function (passo) {
-    COLUNAS_IMPORTACAO.forEach(function (def) {
+    colunasImportacao_().forEach(function (def) {
       if (mapa[def[0]] !== undefined) return;
       for (var j = 0; j < chaves.length; j++) {
         if (usadas[j] || !chaves[j]) continue;
@@ -471,6 +475,7 @@ function analisarImportacao_(eu, usuarios, existentes, linhas, opcoes) {
   if (linhas.length - 1 > MAX_LINHAS_IMPORTACAO) throw new Error('No máximo ' + MAX_LINHAS_IMPORTACAO + ' clientes por vez.');
   var cab = linhas[0].map(function (h) { return String(h == null ? '' : h).trim(); });
   var col = mapearColunas_(cab);
+  var rotulos = rotulosImportacao_();
   if (col.nome === undefined && col.idExterno === undefined) {
     throw new Error('Não achei a coluna com o nome do cliente. A primeira linha precisa ser o cabeçalho ' +
       '(ex.: "Name", "Cliente" ou "Empresa").');
@@ -617,10 +622,10 @@ function analisarImportacao_(eu, usuarios, existentes, linhas, opcoes) {
   return {
     colunas: cab.map(function (h, j) {
       var campo = Object.keys(col).filter(function (k) { return col[k] === j; })[0];
-      return { cabecalho: h, campo: campo ? ROTULOS_IMPORTACAO[campo] : '' };
+      return { cabecalho: h, campo: campo ? rotulos[campo] : '' };
     }),
     faltando: ['nome', 'idExterno', 'segmento', 'responsavel', 'etapa'].filter(function (k) { return col[k] === undefined; })
-      .map(function (k) { return ROTULOS_IMPORTACAO[k]; }),
+      .map(function (k) { return rotulos[k]; }),
     linhas: saida,
     contagem: contagem,
     desconhecidos: { etapa: Object.keys(desconhecidos.etapa), segmento: Object.keys(desconhecidos.segmento) }
