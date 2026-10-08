@@ -100,7 +100,9 @@ function apiEstado() {
     usuarios: podeGerenciarUsuarios_(eu) ? usuarios.map(semLinha_) : [],
     problemasClientes: eu.admin ? lidos.problemas : [],
     avisosClientes: eu.admin ? lidos.avisos : [],
-    planilhaUrl: eu.admin ? urlPlanilha_() : ''
+    planilhaUrl: eu.admin ? urlPlanilha_() : '',
+    sincronizacao: eu.admin ? estadoSincronizacao_() : null,
+    camposInfo: CAMPOS_INFO.map(function (c) { return { campo: c[0], rotulo: c[2], grupo: c[4], tipo: c[5] }; })
   };
 }
 
@@ -282,9 +284,10 @@ function apiAdicionarCliente(dados) {
     });
     if (repetido) throw new Error('Esse cliente já está cadastrado.');
     inserir_('Clientes', {
-      id_externo: idExterno, nome: nome, segmento: segmento, responsavel_email: email,
-      etapa: etapa, desde: desde.slice(0, 10)
+      hotmart_id: idExterno, nome: nome, segmento: segmento, responsavel_email: email,
+      etapa: etapa, desde: desde.slice(0, 10), atualizado_em: new Date().toISOString()
     });
+    registrarHistorico_([{ hotmartId: idExterno, cliente: nome, de: '', para: etapa }], eu.email, 'app');
     return apiEstado();
   });
 }
@@ -321,7 +324,8 @@ function apiMudarEtapa(idCliente, etapaNova) {
     if (!cliente) throw new Error('Cliente não encontrado.');
     if (!podeEditarCliente_(eu, cliente)) throw new Error('Você não pode mudar este cliente.');
     if (cliente.etapa === etapa) return apiEstado();
-    atualizar_('Clientes', cliente.linha, { etapa: etapa, desde: hoje_() });
+    atualizar_('Clientes', cliente.linha, { etapa: etapa, desde: hoje_(), atualizado_em: new Date().toISOString() });
+    registrarHistorico_([{ hotmartId: cliente.idExterno, cliente: cliente.nome, de: cliente.etapa, para: etapa }], eu.email, 'app');
     return apiEstado();
   });
 }
@@ -341,28 +345,61 @@ function apiDefinirLinkAnalise(idCliente, link) {
   });
 }
 
-// ---------- Importar clientes (colar da planilha) ----------
+/** Grava mudanças de etapa na aba Historico (base da linha do tempo do cliente). */
+function registrarHistorico_(itens, por, origem) {
+  var agora = new Date().toISOString();
+  inserirVarios_('Historico', itens.map(function (h) {
+    return { quando: agora, hotmart_id: h.hotmartId, cliente: h.cliente, de: h.de, para: h.para, por: por, origem: origem };
+  }));
+}
 
-var MAX_LINHAS_IMPORTACAO = 2000;
+/** Página do cliente: dados extras que não vão no estado geral (histórico de etapas). */
+function apiCliente(idCliente) {
+  var usuarios = lerUsuarios_();
+  var eu = exigirUsuario_(usuarios);
+  var cliente = clientesVisiveis_(eu, lerClientes_(usuarios).clientes).filter(function (c) { return c.id === String(idCliente); })[0];
+  if (!cliente) throw new Error('Cliente não encontrado.');
+  var historico = lerHistorico_().filter(function (h) {
+    return cliente.idExterno ? h.hotmartId === cliente.idExterno : (!h.hotmartId && h.cliente === cliente.nome);
+  });
+  var nomes = {};
+  usuarios.forEach(function (u) { nomes[u.email] = u.nome || u.email; });
+  return {
+    historico: historico.slice(0, 100).map(function (h) { return Object.assign({}, h, { porNome: nomes[h.por] || h.por }); })
+  };
+}
+
+// ---------- Importar clientes (colar da planilha ou relatório do Salesforce) ----------
+
+var MAX_LINHAS_IMPORTACAO = 3000;
+var ABA_SINCRONIZACAO = 'Salesforce';
+var PROP_OPCOES_IMPORTACAO = 'OPCOES_IMPORTACAO';
+var PROP_ULTIMA_SINCRONIZACAO = 'ULTIMA_SINCRONIZACAO';
+var PROP_SINCRONIZACAO_ATIVA = 'SINCRONIZACAO_ATIVA';
 
 /**
- * Quais colunas viram o quê. Primeiro tenta o nome exato; depois "contém" (ex.: "E-mail do
- * responsável" contém "responsavel"). A ordem importa: "Data da etapa" é data, não etapa.
+ * Quais colunas viram o quê. [campo, nomes exatos (achatados), pedaços para "contém"]
+ * Primeiro tenta o nome exato em todos os campos; depois "contém" (ex.: "E-mail do responsável").
+ * A ordem importa: "Data da etapa" é data, não etapa.
  */
 var COLUNAS_IMPORTACAO = [
-  ['responsavel', ['responsavel', 'responsavelemail', 'emailresponsavel', 'emaildoresponsavel', 'onboarder', 'owner', 'csm', 'analista', 'email', 'dono'], ['responsavel', 'onboarder']],
-  ['idExterno', ['idexterno', 'id', 'codigo', 'cod', 'astrobox', 'idastrobox', 'codigoastrobox', 'idcliente', 'iddocliente', 'codigocliente', 'codigodocliente'], ['astrobox', 'codigo']],
+  ['responsavel', ['responsavel', 'responsavelemail', 'emailresponsavel', 'emaildoresponsavel', 'onboarder', 'owner', 'ownername', 'opportunityownername', 'csm', 'analista', 'email', 'dono'], ['responsavel', 'onboarder']],
+  ['idExterno', ['hotmartid', 'idhotmart', 'hotmart', 'idexterno', 'id', 'codigo', 'cod', 'idcliente', 'iddocliente', 'codigocliente', 'codigodocliente'], ['hotmartid', 'codigo']],
   ['segmento', ['segmento', 'seg', 'segmentacao', 'nivel', 'tier', 'faixa'], ['segment', 'nivel']],
   ['desde', ['desde', 'data', 'datainicio', 'datadeinicio', 'inicio', 'dataetapa', 'dataentrada', 'entrada', 'desdequando'], ['data']],
-  ['etapa', ['etapa', 'fase', 'status', 'stage', 'etapaatual', 'faseatual'], ['etapa', 'fase']],
+  ['etapa', ['etapa', 'fase', 'status', 'stage', 'etapaatual', 'faseatual', 'onboardingstatus'], ['etapa', 'fase']],
   ['linkAnalise', ['link', 'linkanalise', 'linkdaanalise', 'analise', 'notebook'], ['link']],
-  ['nome', ['nome', 'cliente', 'nomecliente', 'nomedocliente', 'empresa', 'razaosocial', 'conta', 'account', 'nomefantasia', 'nomedaempresa'], ['cliente', 'empresa', 'nome']]
-];
+  ['nome', ['nome', 'name', 'cliente', 'nomecliente', 'nomedocliente', 'empresa', 'razaosocial', 'conta', 'account', 'accountname', 'opportunityname', 'nomefantasia', 'nomedaempresa'], ['cliente', 'empresa', 'nome']]
+].concat(CAMPOS_INFO.map(function (c) { return [c[0], c[3], []]; }));
 
-var ROTULOS_IMPORTACAO = {
-  nome: 'Nome', idExterno: 'Código Astrobox', segmento: 'Segmento', responsavel: 'Responsável',
-  etapa: 'Etapa', desde: 'Na etapa desde', linkAnalise: 'Link da análise'
-};
+var ROTULOS_IMPORTACAO = (function () {
+  var r = {
+    nome: 'Nome', idExterno: 'Hotmart ID', segmento: 'Segmento', responsavel: 'Responsável',
+    etapa: 'Etapa', desde: 'Na etapa desde', linkAnalise: 'Link da análise'
+  };
+  CAMPOS_INFO.forEach(function (c) { r[c[0]] = c[2]; });
+  return r;
+})();
 
 /** Texto colado (do Sheets/Excel: separado por tab; CSV: vírgula ou ponto e vírgula) → linhas. */
 function lerTextoColado_(texto) {
@@ -385,9 +422,7 @@ function lerTextoColado_(texto) {
     else cel += ch;
   }
   if (cel !== '' || linha.length) { linha.push(cel); linhas.push(linha); }
-  return linhas
-    .map(function (l) { return l.map(function (c) { return c.trim(); }); })
-    .filter(function (l) { return l.some(function (c) { return c !== ''; }); });
+  return linhas.map(function (l) { return l.map(function (c) { return c.trim(); }); });
 }
 
 /** Cabeçalho → { campo: índice da coluna }. */
@@ -410,24 +445,35 @@ function mapearColunas_(cabecalho) {
   return mapa;
 }
 
+/** Valor de um campo extra como vai para a planilha (data aaaa-mm-dd, número, texto). */
+function valorInfo_(def, bruto) {
+  if (bruto === '' || bruto == null) return '';
+  if (def[5] === 'data') return (lerData_(bruto) || '').slice(0, 10) || String(bruto).trim();
+  if (def[5] === 'numero') { var n = lerNumero_(bruto); return n !== null ? n : String(bruto).trim(); }
+  return String(bruto).trim().slice(0, 5000);
+}
+
 /**
- * Analisa o texto colado sem gravar nada. Cada linha sai com situação:
- * ok | aviso (entra, mas olhe) | repetido (já existe, fica de fora) | erro (fica de fora).
+ * Analisa as linhas (cabeçalho + clientes) sem gravar nada. Cada linha sai com uma ação:
+ * novo | atualiza | igual (nada mudou) | repetido (aparece duas vezes na colagem) | erro.
+ * Cliente que já existe (mesmo Hotmart ID; sem ID, mesmo nome) é ATUALIZADO, não duplicado.
+ * Etapa e responsável só são trocados quando o valor de origem mudou desde a última importação:
+ * assim, o que o time muda no app não é desfeito pela próxima colagem igual.
  * opcoes: { etapaPadrao, segmentoPadrao, mapas: { etapa: {texto: etapa}, segmento: {texto: seg} } }
  */
-function analisarImportacao_(eu, usuarios, existentes, texto, opcoes) {
+function analisarImportacao_(eu, usuarios, existentes, linhas, opcoes) {
   opcoes = opcoes || {};
   var mapas = opcoes.mapas || {};
   var mapaEtapa = mapas.etapa || {};
   var mapaSeg = mapas.segmento || {};
-  var linhas = lerTextoColado_(texto);
+  linhas = linhas.filter(function (l) { return l.some(function (c) { return c !== '' && c != null; }); });
   if (linhas.length < 2) throw new Error('Cole o cabeçalho e pelo menos uma linha de cliente.');
-  if (linhas.length - 1 > MAX_LINHAS_IMPORTACAO) throw new Error('Cole no máximo ' + MAX_LINHAS_IMPORTACAO + ' clientes por vez.');
-  var cab = linhas[0];
+  if (linhas.length - 1 > MAX_LINHAS_IMPORTACAO) throw new Error('No máximo ' + MAX_LINHAS_IMPORTACAO + ' clientes por vez.');
+  var cab = linhas[0].map(function (h) { return String(h == null ? '' : h).trim(); });
   var col = mapearColunas_(cab);
-  if (col.nome === undefined) {
-    throw new Error('Não achei a coluna com o nome do cliente. A primeira linha colada precisa ser o cabeçalho ' +
-      '(ex.: "Cliente", "Nome" ou "Empresa").');
+  if (col.nome === undefined && col.idExterno === undefined) {
+    throw new Error('Não achei a coluna com o nome do cliente. A primeira linha precisa ser o cabeçalho ' +
+      '(ex.: "Name", "Cliente" ou "Empresa").');
   }
   var etapaPadrao = lerEtapa_(opcoes.etapaPadrao) || ETAPAS[0];
   var segPadrao = lerSegmentos_([opcoes.segmentoPadrao || ''])[0] || '';
@@ -439,120 +485,268 @@ function analisarImportacao_(eu, usuarios, existentes, texto, opcoes) {
     var k = chave_(u.nome);
     if (k) porNome[k] = porNome[k] === undefined ? u : null; // null = nome repetido, não dá para saber quem é
   });
-  var vistos = {};
+  var porId = {};
+  var porNomeCliente = {};
   existentes.forEach(function (c) {
-    vistos[c.idExterno ? 'id:' + c.idExterno : 'nome:' + chave_(c.nome) + '|' + c.segmento] = 'cadastro';
+    if (c.idExterno) porId[c.idExterno] = c;
+    else { var k = chave_(c.nome); porNomeCliente[k] = porNomeCliente[k] === undefined ? c : null; }
   });
+  var vistos = {};
   var desconhecidos = { etapa: {}, segmento: {} };
 
-  function valor(l, campo) { return col[campo] === undefined ? '' : String(l[col[campo]] || '').trim(); }
+  function bruto(l, campo) { return col[campo] === undefined ? '' : l[col[campo]]; }
+  function texto(l, campo) { var v = bruto(l, campo); return v == null ? '' : String(v).trim(); }
+  function temColuna(campo) { return col[campo] !== undefined; }
 
   var saida = linhas.slice(1).map(function (l, i) {
     var erros = [];
     var avisos = [];
-    var nome = valor(l, 'nome').slice(0, 140);
-    var idExterno = valor(l, 'idExterno').slice(0, 60);
-    if (!nome) erros.push('sem nome');
+    var mudancas = [];
+    var nome = texto(l, 'nome').slice(0, 140);
+    var idExterno = texto(l, 'idExterno').slice(0, 60);
+    var existente = idExterno ? porId[idExterno] : (nome ? porNomeCliente[chave_(nome)] : null);
+    if (!nome && !existente) erros.push('sem nome');
 
     // Responsável: e-mail ou nome de alguém em Usuários.
-    var respTexto = valor(l, 'responsavel');
+    var respTexto = texto(l, 'responsavel');
     var dono = null;
-    var email = '';
-    if (respTexto) {
-      dono = respTexto.indexOf('@') >= 0 ? porEmail[respTexto.toLowerCase()] : porNome[chave_(respTexto)];
-      if (dono) email = dono.email;
-      else if (respTexto.indexOf('@') >= 0) {
-        email = respTexto.toLowerCase();
-        avisos.push(email + ' não está em Usuários: entra sem responsável até você cadastrar a pessoa');
-      } else avisos.push('"' + respTexto + '" não está em Usuários: entra sem responsável');
-    }
+    if (respTexto) dono = respTexto.indexOf('@') >= 0 ? porEmail[respTexto.toLowerCase()] : porNome[chave_(respTexto)];
 
-    // Segmento: da coluna, senão do responsável, senão o padrão escolhido.
-    var segTexto = valor(l, 'segmento');
+    // Segmento: da coluna, senão (cliente novo) do responsável ou o padrão escolhido.
+    var segTexto = texto(l, 'segmento');
     var segmento = null;
     if (segTexto) {
       segmento = lerSegmentoCliente_(segTexto) || lerSegmentos_([mapaSeg[segTexto] || ''])[0] || null;
       if (!segmento) { desconhecidos.segmento[segTexto] = true; erros.push('segmento "' + segTexto + '" não reconhecido'); }
-    } else if (dono && dono.papel === 'onboarder' && dono.segmentos.length === 1) segmento = dono.segmentos[0];
+    } else if (existente) segmento = existente.segmento;
+    else if (dono && dono.papel === 'onboarder' && dono.segmentos.length === 1) segmento = dono.segmentos[0];
     else if (segPadrao) segmento = segPadrao;
-    else erros.push('sem segmento');
+    else erros.push('sem segmento' + (respTexto ? ' ("' + respTexto + '" não é onboarder em Usuários)' : ''));
     if (segmento && !podeCadastrarCliente_(eu, segmento)) erros.push(segmento + ' não é um segmento seu');
-    if (segmento && dono && (dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0)) {
-      avisos.push((dono.nome || dono.email) + ' não é onboarder ' + segmento + ': entra sem responsável');
-      email = '';
-    }
-    if (!respTexto) avisos.push('sem responsável: escolha depois na tabela');
+    if (existente && !podeCadastrarCliente_(eu, existente.segmento)) erros.push(existente.segmento + ' não é um segmento seu');
 
-    // Etapa: da coluna (tolerante) ou a padrão.
-    var etapaTexto = valor(l, 'etapa');
-    var etapa = etapaTexto ? (lerEtapa_(etapaTexto) || lerEtapa_(mapaEtapa[etapaTexto])) : etapaPadrao;
-    if (!etapa) { desconhecidos.etapa[etapaTexto] = true; erros.push('etapa "' + etapaTexto + '" não existe'); }
+    // Etapa da origem (tolerante) ou a padrão (só para cliente novo).
+    var etapaTexto = texto(l, 'etapa');
+    var etapaIn = etapaTexto ? (lerEtapa_(etapaTexto) || lerEtapa_(mapaEtapa[etapaTexto])) : null;
+    if (etapaTexto && !etapaIn) { desconhecidos.etapa[etapaTexto] = true; erros.push('etapa "' + etapaTexto + '" não existe'); }
 
-    // Data: da coluna ou hoje.
-    var desdeTexto = valor(l, 'desde');
-    var desde = desdeTexto ? lerData_(desdeTexto) : hoje + 'T12:00:00.000Z';
-    if (!desde) erros.push('data "' + desdeTexto + '" inválida');
-    else if (desde.slice(0, 10) > hoje) erros.push('data no futuro');
+    var desdeBruto = bruto(l, 'desde');
+    var desdeIn = desdeBruto !== '' && desdeBruto != null ? lerData_(desdeBruto) : null;
+    if (desdeBruto !== '' && desdeBruto != null && !desdeIn) erros.push('data "' + desdeBruto + '" inválida');
+    else if (desdeIn && desdeIn.slice(0, 10) > hoje) erros.push('data no futuro');
 
-    var linkTexto = valor(l, 'linkAnalise');
-    var link = lerLinkAnalise_(linkTexto);
+    var link = lerLinkAnalise_(texto(l, 'linkAnalise'));
     if (link === null) { avisos.push('link ignorado (só links do Google)'); link = ''; }
 
-    var situacao = erros.length ? 'erro' : avisos.length ? 'aviso' : 'ok';
+    var gravar = {};       // colunas a gravar
+    var silencioso = {};   // controle interno, não conta como mudança
+    var historico = null;
+    var etapaFinal = etapaIn;
+    var emailFinal = '';
+
+    if (!existente) {
+      etapaFinal = etapaIn || etapaPadrao;
+      if (respTexto && !dono) {
+        if (respTexto.indexOf('@') >= 0) { emailFinal = respTexto.toLowerCase(); avisos.push(emailFinal + ' não está em Usuários: entra sem responsável até você cadastrar a pessoa'); }
+        else avisos.push('"' + respTexto + '" não está em Usuários: entra sem responsável');
+      } else if (dono && segmento && (dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0)) {
+        avisos.push((dono.nome || dono.email) + ' não é onboarder ' + segmento + ': entra sem responsável');
+      } else if (dono) emailFinal = dono.email;
+      if (!respTexto) avisos.push('sem responsável: escolha depois na tabela');
+      gravar = {
+        hotmart_id: idExterno, nome: nome, segmento: segmento || '', responsavel_email: emailFinal,
+        etapa: etapaFinal, desde: (desdeIn || hoje).slice(0, 10), link_analise: link || '',
+        etapa_origem: etapaIn || '', owner_origem: respTexto, atualizado_em: new Date().toISOString()
+      };
+      CAMPOS_INFO.forEach(function (d) { if (temColuna(d[0])) gravar[d[1]] = valorInfo_(d, bruto(l, d[0])); });
+      historico = { de: '', para: etapaFinal };
+    } else {
+      emailFinal = existente.responsavelEmail;
+      etapaFinal = existente.etapa;
+      if (nome && nome !== existente.nome) { gravar.nome = nome; mudancas.push('nome'); }
+      if (segmento && segmento !== existente.segmento) { gravar.segmento = segmento; mudancas.push('segmento ' + existente.segmento + ' → ' + segmento); }
+      // Etapa: só quando a origem mudou desde a última importação.
+      if (etapaIn && etapaIn !== existente.etapaOrigem) {
+        silencioso.etapa_origem = etapaIn;
+        if (etapaIn !== existente.etapa) {
+          gravar.etapa = etapaIn;
+          gravar.desde = (desdeIn || hoje).slice(0, 10);
+          mudancas.push(existente.etapa + ' → ' + etapaIn);
+          historico = { de: existente.etapa, para: etapaIn };
+          etapaFinal = etapaIn;
+        }
+      }
+      // Responsável: idem.
+      if (temColuna('responsavel') && respTexto !== existente.ownerOrigem) {
+        silencioso.owner_origem = respTexto;
+        var segFinal = segmento || existente.segmento;
+        if (dono && dono.papel === 'onboarder' && dono.segmentos.indexOf(segFinal) >= 0) {
+          if (dono.email !== existente.responsavelEmail) { gravar.responsavel_email = dono.email; mudancas.push('responsável → ' + (dono.nome || dono.email)); emailFinal = dono.email; }
+        } else if (respTexto) avisos.push('"' + respTexto + '" não é onboarder ' + segFinal + ' em Usuários: responsável mantido');
+      }
+      if (link && link !== existente.linkAnalise) { gravar.link_analise = link; mudancas.push('link'); }
+      var infoMudou = [];
+      CAMPOS_INFO.forEach(function (d) {
+        if (!temColuna(d[0])) return;
+        var v = valorInfo_(d, bruto(l, d[0]));
+        if (String(v) !== String(existente.info[d[0]] == null ? '' : existente.info[d[0]])) { gravar[d[1]] = v; infoMudou.push(d[2]); }
+      });
+      if (infoMudou.length) mudancas.push(infoMudou.length === 1 ? infoMudou[0] : infoMudou.length + ' campos (' + infoMudou.slice(0, 3).join(', ') + (infoMudou.length > 3 ? '…' : '') + ')');
+      if (mudancas.length) gravar.atualizado_em = new Date().toISOString();
+    }
+
+    var acao = erros.length ? 'erro' : existente ? (mudancas.length ? 'atualiza' : 'igual') : 'novo';
     if (!erros.length) {
-      var chave = idExterno ? 'id:' + idExterno : 'nome:' + chave_(nome) + '|' + segmento;
-      if (vistos[chave]) {
-        situacao = 'repetido';
-        erros = [vistos[chave] === 'cadastro' ? 'já está cadastrado' : 'repetido na própria colagem'];
-        avisos = [];
-      } else vistos[chave] = 'colagem';
+      var chave = idExterno ? 'id:' + idExterno : 'nome:' + chave_(nome || existente.nome);
+      if (vistos[chave]) { acao = 'repetido'; erros = ['aparece de novo na colagem (linha ' + vistos[chave] + ')']; avisos = []; }
+      else vistos[chave] = i + 2;
     }
     return {
-      linha: i + 2, situacao: situacao, motivo: erros.concat(avisos).join('; '),
-      nome: nome, idExterno: idExterno, segmento: segmento || segTexto, responsavelEmail: email,
-      responsavelTexto: respTexto, etapa: etapa || etapaTexto, desde: desde ? desde.slice(0, 10) : desdeTexto, linkAnalise: link || ''
+      linha: i + 2, acao: acao, motivo: erros.concat(avisos).join('; '), comAviso: !erros.length && avisos.length > 0,
+      mudancas: mudancas.join(' · '),
+      nome: nome || (existente ? existente.nome : ''), idExterno: idExterno || (existente ? existente.idExterno : ''),
+      segmento: segmento || segTexto, responsavelTexto: respTexto, etapa: etapaFinal || etapaTexto,
+      desde: gravar.desde || (existente ? existente.desde.slice(0, 10) : ''),
+      _linhaPlanilha: existente ? existente.linha : 0,
+      _gravar: Object.assign(gravar, silencioso), _historico: historico
     };
   });
 
-  var contagem = { ok: 0, aviso: 0, repetido: 0, erro: 0 };
-  saida.forEach(function (r) { contagem[r.situacao] += 1; });
+  var contagem = { novo: 0, atualiza: 0, igual: 0, repetido: 0, erro: 0, comAviso: 0 };
+  saida.forEach(function (r) { contagem[r.acao] += 1; if (r.comAviso) contagem.comAviso += 1; });
   return {
     colunas: cab.map(function (h, j) {
       var campo = Object.keys(col).filter(function (k) { return col[k] === j; })[0];
       return { cabecalho: h, campo: campo ? ROTULOS_IMPORTACAO[campo] : '' };
     }),
-    faltando: Object.keys(ROTULOS_IMPORTACAO).filter(function (k) { return col[k] === undefined; }).map(function (k) { return ROTULOS_IMPORTACAO[k]; }),
+    faltando: ['nome', 'idExterno', 'segmento', 'responsavel', 'etapa'].filter(function (k) { return col[k] === undefined; })
+      .map(function (k) { return ROTULOS_IMPORTACAO[k]; }),
     linhas: saida,
     contagem: contagem,
     desconhecidos: { etapa: Object.keys(desconhecidos.etapa), segmento: Object.keys(desconhecidos.segmento) }
   };
 }
 
+/** Grava o resultado de uma análise: novos de uma vez, atualizações de uma vez, histórico. */
+function aplicarImportacao_(r, por, origem) {
+  var novos = r.linhas.filter(function (l) { return l.acao === 'novo'; });
+  var mudar = r.linhas.filter(function (l) {
+    return (l.acao === 'atualiza' || l.acao === 'igual') && Object.keys(l._gravar).length;
+  });
+  inserirVarios_('Clientes', novos.map(function (l) { return l._gravar; }));
+  atualizarVarios_('Clientes', mudar.map(function (l) { return { linha: l._linhaPlanilha, mudancas: l._gravar }; }));
+  var hist = r.linhas.filter(function (l) { return (l.acao === 'novo' || l.acao === 'atualiza') && l._historico; })
+    .map(function (l) { return { hotmartId: l.idExterno, cliente: l.nome, de: l._historico.de, para: l._historico.para }; });
+  if (hist.length) registrarHistorico_(hist, por, origem);
+  return { novos: novos.length, atualizados: r.contagem.atualiza, deFora: r.contagem.erro + r.contagem.repetido };
+}
+
+function semInterno_(r) {
+  return Object.assign({}, r, {
+    linhas: r.linhas.map(function (l) {
+      var c = Object.assign({}, l);
+      delete c._gravar; delete c._historico; delete c._linhaPlanilha;
+      return c;
+    })
+  });
+}
+
+function exigirImportador_(eu) {
+  if (!ORDEM_SEGMENTOS.some(function (sg) { return podeCadastrarCliente_(eu, sg); })) throw new Error('Você não pode importar clientes.');
+}
+
 /** Prévia: não grava nada. */
 function apiPreverImportacao(texto, opcoes) {
   var usuarios = lerUsuarios_();
   var eu = exigirUsuario_(usuarios);
-  if (!ORDEM_SEGMENTOS.some(function (sg) { return podeCadastrarCliente_(eu, sg); })) throw new Error('Você não pode importar clientes.');
-  return analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, texto, opcoes);
+  exigirImportador_(eu);
+  return semInterno_(analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, lerTextoColado_(texto), opcoes));
 }
 
-/** Grava as linhas ok e com aviso. Analisa de novo aqui: nunca confia na prévia que a tela mandou. */
+/** Grava. Analisa de novo aqui: nunca confia na prévia que a tela mandou. */
 function apiImportarClientes(texto, opcoes) {
   return comTrava_(function () {
     var usuarios = lerUsuarios_();
     var eu = exigirUsuario_(usuarios);
-    if (!ORDEM_SEGMENTOS.some(function (sg) { return podeCadastrarCliente_(eu, sg); })) throw new Error('Você não pode importar clientes.');
-    var r = analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, texto, opcoes);
-    var entram = r.linhas.filter(function (l) { return l.situacao === 'ok' || l.situacao === 'aviso'; });
-    if (!entram.length) throw new Error('Nenhuma linha pronta para importar. Veja os motivos na prévia.');
-    inserirVarios_('Clientes', entram.map(function (l) {
-      return {
-        id_externo: l.idExterno, nome: l.nome, segmento: l.segmento, responsavel_email: l.responsavelEmail,
-        etapa: l.etapa, desde: l.desde, link_analise: l.linkAnalise
-      };
-    }));
+    exigirImportador_(eu);
+    var r = analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, lerTextoColado_(texto), opcoes);
+    if (!r.contagem.novo && !r.contagem.atualiza) throw new Error('Nada para importar: nenhum cliente novo nem mudança. Veja os motivos na prévia.');
+    var feito = aplicarImportacao_(r, eu.email, 'importação');
+    // A sincronização automática usa as mesmas "traduções" (etapas/segmentos) da última importação do admin.
+    if (eu.admin) PropertiesService.getScriptProperties().setProperty(PROP_OPCOES_IMPORTACAO, JSON.stringify(opcoes || {}));
     var estado = apiEstado();
-    estado.importacao = { importados: entram.length, deFora: r.linhas.length - entram.length };
+    estado.importacao = feito;
     return estado;
   });
+}
+
+// ---------- Sincronização automática (aba "Salesforce") ----------
+
+/**
+ * Lê a aba "Salesforce" desta planilha (preenchida pelo conector do Salesforce para Sheets,
+ * ou colada à mão) e atualiza os clientes. Roda sozinha de hora em hora depois de
+ * ativarSincronizacao(); também pelo botão "Sincronizar agora" (admin).
+ */
+function sincronizar() {
+  return comTrava_(function () {
+    var props = PropertiesService.getScriptProperties();
+    var sh = planilha_().getSheetByName(ABA_SINCRONIZACAO);
+    var resultado;
+    if (!sh || sh.getLastRow() < 2) {
+      resultado = { quando: new Date().toISOString(), erro: 'A aba "' + ABA_SINCRONIZACAO + '" não existe ou está vazia.' };
+    } else {
+      try {
+        var usuarios = lerUsuarios_();
+        var sistema = { email: 'sincronização', nome: 'Sincronização', papel: 'lideranca', segmentos: ORDEM_SEGMENTOS.slice(), admin: true };
+        var opcoes = JSON.parse(props.getProperty(PROP_OPCOES_IMPORTACAO) || '{}');
+        var r = analisarImportacao_(sistema, usuarios, lerClientes_(usuarios).clientes, sh.getDataRange().getValues(), opcoes);
+        var feito = aplicarImportacao_(r, 'sincronização', 'salesforce');
+        resultado = {
+          quando: new Date().toISOString(), novos: feito.novos, atualizados: feito.atualizados, erros: r.contagem.erro,
+          problemas: r.linhas.filter(function (l) { return l.acao === 'erro'; }).slice(0, 20)
+            .map(function (l) { return 'Linha ' + l.linha + ' (' + (l.nome || l.idExterno || '?') + '): ' + l.motivo; })
+        };
+      } catch (e) {
+        resultado = { quando: new Date().toISOString(), erro: e.message };
+      }
+    }
+    props.setProperty(PROP_ULTIMA_SINCRONIZACAO, JSON.stringify(resultado));
+    return resultado;
+  });
+}
+
+/** Rode UMA vez pelo editor (Executar → ativarSincronizacao). Pede a autorização de gatilhos. */
+function ativarSincronizacao() {
+  desativarSincronizacao();
+  ScriptApp.newTrigger('sincronizar').timeBased().everyHours(1).create();
+  PropertiesService.getScriptProperties().setProperty(PROP_SINCRONIZACAO_ATIVA, 'sim');
+  var r = sincronizar();
+  Logger.log('Sincronização ativada (a cada hora). Primeira rodada: ' + JSON.stringify(r));
+  return r;
+}
+
+function desativarSincronizacao() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'sincronizar') ScriptApp.deleteTrigger(t);
+  });
+  PropertiesService.getScriptProperties().deleteProperty(PROP_SINCRONIZACAO_ATIVA);
+}
+
+function apiSincronizarAgora() {
+  var eu = exigirUsuario_();
+  if (!eu.admin) throw new Error('Só o admin sincroniza.');
+  sincronizar();
+  return apiEstado();
+}
+
+/** Situação da sincronização para a tela do admin. */
+function estadoSincronizacao_() {
+  var props = PropertiesService.getScriptProperties();
+  var aba = planilha_().getSheetByName(ABA_SINCRONIZACAO);
+  return {
+    aba: ABA_SINCRONIZACAO,
+    abaExiste: !!aba,
+    ativa: props.getProperty(PROP_SINCRONIZACAO_ATIVA) === 'sim',
+    ultima: JSON.parse(props.getProperty(PROP_ULTIMA_SINCRONIZACAO) || 'null')
+  };
 }

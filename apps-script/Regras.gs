@@ -12,8 +12,35 @@ var ETAPAS = [
   'Product Migration',
   'Ready for Activation',
   'Activation & Monitoring',
+  'Faturamento',
   'Accomplished',
   'Unaccomplished'
+];
+/** Etapas em que o onboarding já acabou (não contam como "em andamento"). */
+var ETAPAS_FINAIS = ['Accomplished', 'Unaccomplished'];
+/** Outros nomes aceitos para uma etapa (ex.: como vem do Salesforce). */
+var APELIDOS_ETAPA = { billing: 'Faturamento', faturando: 'Faturamento' };
+
+/**
+ * Informações extras do cliente (vêm do relatório do Salesforce).
+ * [propriedade, coluna na aba Clientes, rótulo na tela, nomes de coluna aceitos na importação, grupo, tipo]
+ * Os nomes aceitos estão "achatados": "Opportunity: Amount 1-3" → "opportunityamount13".
+ */
+var CAMPOS_INFO = [
+  ['closedDate', 'closed_date', 'Fechamento (Closed Date)', ['closeddate', 'datadefechamento', 'fechamento'], 'negocio', 'data'],
+  ['health', 'onboarding_health', 'Saúde do onboarding', ['onboardinghealth', 'health', 'saude'], 'saude', 'texto'],
+  ['healthReason', 'health_reason', 'Motivo da saúde', ['onboardinghealthreason', 'healthreason', 'motivodasaude'], 'saude', 'texto'],
+  ['welcomeStatus', 'welcome_status', 'Welcome status', ['welcomestatus', 'opportunitywelcomestatus'], 'saude', 'texto'],
+  ['gmv', 'gmv_pos_fechamento', 'GMV após o fechamento (BRL)', ['gmvbrlafterclosedwon', 'gmvafterclosedwon', 'gmv', 'gmvbrl'], 'negocio', 'numero'],
+  ['valor13', 'valor_1_3_meses', 'Previsto 1–3 meses', ['opportunityamount13', 'amount13'], 'negocio', 'numero'],
+  ['valor12', 'valor_12_meses', 'Previsto 12 meses', ['opportunityamount12months', 'amount12months'], 'negocio', 'numero'],
+  ['plataformaAtual', 'plataforma_atual', 'Plataforma atual', ['opportunitycurrentplatform', 'currentplatform', 'plataformaatual'], 'negocio', 'texto'],
+  ['taxaAtual', 'taxa_atual', 'Taxa atual', ['currentfee', 'opportunitycurrentfee', 'taxaatual'], 'negocio', 'texto'],
+  ['criadoPor', 'criado_por', 'Oportunidade criada por', ['opportunitycreatedby', 'createdby'], 'origem', 'texto'],
+  ['hotmartEvent', 'hotmart_event', 'Evento Hotmart', ['opportunityhotmartevent', 'hotmartevent'], 'origem', 'texto'],
+  ['inboundCampaign', 'inbound_campaign', 'Campanha inbound', ['opportunityinboundcampaign', 'inboundcampaign'], 'origem', 'texto'],
+  ['leadFlow', 'lead_flow', 'Lead flow', ['opportunityleadflow', 'leadflow'], 'origem', 'texto'],
+  ['estrategia', 'estrategia', 'Estratégia para atingir as metas', ['strategyforachievinggoals', 'estrategia'], 'estrategia', 'texto']
 ];
 var ESCOPOS = ['geral', 'segmento', 'cliente'];
 
@@ -42,8 +69,30 @@ function lerEtapa_(valor) {
   function k(v) { return chave_(normalizarTexto_(v).replace(/&/g, ' ').replace(/\b(and|e)\b/g, ' ')); }
   var alvo = k(valor);
   if (!alvo) return null;
+  if (APELIDOS_ETAPA[alvo]) return APELIDOS_ETAPA[alvo];
   for (var i = 0; i < ETAPAS.length; i++) if (k(ETAPAS[i]) === alvo) return ETAPAS[i];
   return null;
+}
+
+/**
+ * Número de célula ou texto ("R$ 1.234,56", "1,234.56", "12000"). null se não for número.
+ * Separador sozinho seguido de grupos de 3 dígitos ("1.234.567", "1,234") é milhar; senão é decimal.
+ */
+function lerNumero_(valor) {
+  if (typeof valor === 'number') return isFinite(valor) ? valor : null;
+  var v = String(valor == null ? '' : valor).replace(/R\$|BRL|\s/gi, '');
+  if (!v || !/^-?[\d.,]+$/.test(v)) return null;
+  var ponto = v.lastIndexOf('.');
+  var virgula = v.lastIndexOf(',');
+  if (ponto >= 0 && virgula >= 0) {
+    v = ponto > virgula ? v.replace(/,/g, '') : v.replace(/\./g, '').replace(',', '.');
+  } else if (virgula >= 0) {
+    v = /^-?\d{1,3}(,\d{3})+$/.test(v) ? v.replace(/,/g, '') : v.replace(',', '.');
+  } else if (ponto >= 0 && /^-?\d{1,3}(\.\d{3})+$/.test(v)) {
+    v = v.replace(/\./g, '');
+  }
+  var n = Number(v);
+  return isFinite(n) ? n : null;
 }
 
 /** Segmento de um cliente: "7D" ou o nível do cliente ("N4", "Nível 5", "N6+"). null se não der para saber. */

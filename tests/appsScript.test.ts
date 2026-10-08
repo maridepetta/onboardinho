@@ -53,7 +53,7 @@ function cenario() {
 
 test("configurar cria as abas e cadastra quem rodou como admin", () => {
   const { app, fakes } = novoApp();
-  assert.deepEqual(Object.keys(fakes.sheets).sort(), ["Clientes", "Orientacoes", "Pedidos", "Usuarios"]);
+  assert.deepEqual(Object.keys(fakes.sheets).sort(), ["Clientes", "Historico", "Orientacoes", "Pedidos", "Usuarios"]);
   const estado = app.apiEstado();
   assert.equal(estado.tela, "app");
   assert.equal(estado.eu.email, DONA);
@@ -279,32 +279,34 @@ test("link da análise: só https do Google, só quem edita o cliente; aparece p
   assert.equal(app.apiEstado().clientes.find((c: { id: string }) => c.id === "AB-1").linkAnalise, "");
 });
 
-test("planilha antiga (sem link_analise) ou colada em outra ordem: grava na coluna certa", () => {
+test("planilha antiga (id_externo, sem colunas novas) ou colada em outra ordem: grava na coluna certa", () => {
   const { app, como, fakes } = cenario();
-  // Simula a planilha de antes desta versão, com colunas em outra ordem.
+  // Simula a planilha de antes, com id_externo e colunas em outra ordem.
   const antiga = ["nome", "id_externo", "etapa", "segmento", "responsavel_email", "desde"];
   const atual = fakes.values("Clientes");
-  const idx = antiga.map((c) => atual[0].indexOf(c));
+  const idx = antiga.map((c) => atual[0].indexOf(c === "id_externo" ? "hotmart_id" : c));
   fakes.sheets.Clientes.rows = atual.map((r: string[], i: number) => (i === 0 ? antiga.slice() : idx.map((k) => r[k])));
   como("onb7@empresa.com");
   app.apiMudarEtapa("AB-1", "Accomplished");
   app.apiDefinirLinkAnalise("AB-1", "https://docs.google.com/document/d/xyz");
   const v = fakes.values("Clientes");
-  assert.deepEqual(v[0], [...antiga, "link_analise"]);
+  assert.deepEqual(v[0].slice(0, 6), antiga);
+  assert.ok(!v[0].includes("hotmart_id"), "id_externo vale como hotmart_id");
   const lumen = v.find((r: string[]) => r[1] === "AB-1");
   assert.equal(lumen[0], "Lumen Saúde");
   assert.equal(lumen[2], "Accomplished");
-  assert.equal(lumen[6], "https://docs.google.com/document/d/xyz");
+  assert.equal(lumen[v[0].indexOf("link_analise")], "https://docs.google.com/document/d/xyz");
   como(DONA);
   app.apiAdicionarCliente({ idExterno: "AB-9", nome: "Nova", segmento: "7D", responsavelEmail: "onb7@empresa.com", etapa: "Welcome", desde: "2026-10-01" });
   const nova = fakes.values("Clientes").find((r: string[]) => r[1] === "AB-9");
   assert.deepEqual(nova.slice(0, 5), ["Nova", "AB-9", "Welcome", "7D", "onb7@empresa.com"]);
+  assert.equal(fakes.values("Historico").length, 3); // cabeçalho + mudança de etapa + cliente novo
 });
 
 test("importar colando da planilha: reconhece colunas, níveis, etapas; prévia não grava", () => {
   const { app, fakes } = cenario();
   const colado = [
-    ["Código Astrobox", "Nome do cliente", "Nível", "E-mail do responsável", "Fase", "Data da etapa", "Observação"],
+    ["Hotmart ID", "Nome do cliente", "Nível", "E-mail do responsável", "Fase", "Data da etapa", "Observação"],
     ["AB-10", "Nova Era", "N4", "onb7@empresa.com", "Pré-onboarding", "01/10/2026", "x"],
     ["AB-11", "Sem Dono", "N2", "", "activation and monitoring", "", ""],
     ["AB-12", "Fantasma", "N5", "fantasma@empresa.com", "Welcome", "2026-09-30", ""],
@@ -318,39 +320,110 @@ test("importar colando da planilha: reconhece colunas, níveis, etapas; prévia 
   assert.equal(fakes.values("Clientes").length, antes, "prévia não grava");
   const campos = Object.fromEntries(p.colunas.map((c: { cabecalho: string; campo: string }) => [c.cabecalho, c.campo]));
   assert.deepEqual(campos, {
-    "Código Astrobox": "Código Astrobox", "Nome do cliente": "Nome", "Nível": "Segmento",
+    "Hotmart ID": "Hotmart ID", "Nome do cliente": "Nome", "Nível": "Segmento",
     "E-mail do responsável": "Responsável", "Fase": "Etapa", "Data da etapa": "Na etapa desde", "Observação": "",
   });
-  const por = Object.fromEntries(p.linhas.map((l: { idExterno: string; nome: string }) => [l.nome, l]));
-  assert.equal(por["Nova Era"].situacao, "ok");
-  assert.equal(por["Nova Era"].segmento, "7D");
-  assert.equal(por["Nova Era"].etapa, "Pre Onboarding");
-  assert.equal(por["Sem Dono"].situacao, "aviso");
-  assert.equal(por["Sem Dono"].segmento, "6D");
-  assert.equal(por["Sem Dono"].etapa, "Activation & Monitoring");
-  assert.equal(por["Fantasma"].situacao, "aviso");
-  assert.equal(por["Por Nome"].segmento, "8D"); // segmento veio do responsável achado pelo nome
-  assert.equal(por["Por Nome"].situacao, "erro"); // etapa Kickoff não existe
+  const por = Object.fromEntries(p.linhas.map((l: { linha: number }) => [l.linha, l]));
+  assert.equal(por[2].acao, "novo");
+  assert.equal(por[2].segmento, "7D");
+  assert.equal(por[2].etapa, "Pre Onboarding");
+  assert.equal(por[3].acao, "novo");
+  assert.equal(por[3].comAviso, true);
+  assert.equal(por[3].segmento, "6D");
+  assert.equal(por[3].etapa, "Activation & Monitoring");
+  assert.equal(por[4].comAviso, true);
+  assert.equal(por[5].segmento, "8D"); // segmento veio do responsável achado pelo nome
+  assert.equal(por[5].acao, "erro"); // etapa Kickoff não existe
   assert.deepEqual(p.desconhecidos.etapa, ["Kickoff"]);
-  assert.equal(por["Lumen Saúde"].situacao, "repetido");
-  assert.equal(por["Nova Era de novo"].situacao, "repetido");
-  assert.match(por['=HYPERLINK("x")'].motivo, /segmento "N9\?".*futuro/);
-  assert.deepEqual(p.contagem, { ok: 1, aviso: 2, repetido: 2, erro: 2 });
+  assert.equal(por[6].acao, "atualiza"); // Lumen já existe: atualiza a etapa em vez de duplicar
+  assert.match(por[6].mudancas, /Activation & Monitoring → Welcome/);
+  assert.equal(por[7].acao, "repetido");
+  assert.match(por[8].motivo, /segmento "N9\?".*futuro/);
+  assert.deepEqual(p.contagem, { novo: 3, atualiza: 1, igual: 0, repetido: 1, erro: 2, comAviso: 2 });
+  assert.ok(!("_gravar" in p.linhas[0]), "a prévia não leva dados internos para a tela");
 
   // Mapeando a etapa desconhecida, a linha entra.
   const opcoes = { mapas: { etapa: { Kickoff: "Welcome" } } };
-  assert.equal(app.apiPreverImportacao(colado, opcoes).contagem.ok, 2);
+  assert.equal(app.apiPreverImportacao(colado, opcoes).contagem.novo, 4);
   const depois = app.apiImportarClientes(colado, opcoes);
-  assert.deepEqual(depois.importacao, { importados: 4, deFora: 3 });
+  assert.deepEqual(depois.importacao, { novos: 4, atualizados: 1, deFora: 2 });
   const ids = depois.clientes.map((c: { id: string }) => c.id);
   for (const id of ["AB-10", "AB-11", "AB-12", "AB-13"]) assert.ok(ids.includes(id), id);
+  assert.equal(depois.clientes.filter((c: { id: string }) => c.id === "AB-1").length, 1);
   const semDono = depois.clientes.find((c: { id: string }) => c.id === "AB-11");
   assert.equal(semDono.responsavelEmail, "");
   assert.equal(semDono.semDono, true);
   assert.ok(depois.avisosClientes.some((a: string) => a.includes("fantasma@empresa.com")));
-  // importar de novo não duplica
-  assert.throws(() => app.apiImportarClientes(colado, opcoes), /Nenhuma linha pronta/);
+  // importar de novo não duplica nem muda nada
+  assert.throws(() => app.apiImportarClientes(colado, opcoes), /Nada para importar/);
   assert.ok(!JSON.stringify(fakes.sheets).includes("#FORMULA"));
+});
+
+const RELATORIO_CAB = ["Name", "Hotmart ID", "Closed Date", "Onboarding Status", "Opportunity: Created By", "Opportunity: Owner Name",
+  "Opportunity: Current Platform", "Current Fee", "Days in onboarding", "Opportunity: Hotmart Event", "Opportunity: Inbound Campaign",
+  "Opportunity: Lead Flow", "Welcome Status", "GMV BRL after closed won", "Onboarding Health", "Onboarding Health Reason",
+  "Opportunity: Amount 1-3", "Opportunity: Amount 12 months", "Strategy for Achieving Goals"];
+function relatorio(...linhas: string[][]) {
+  return [RELATORIO_CAB, ...linhas].map((l) => l.join("\t")).join("\n");
+}
+const acme = (status: string, health: string, gmv: string) => ["Acme", "HM-1", "15/09/2026", status, "Vendedor X", "Marina Costa",
+  "Kiwify", "9,9%", "23", "Fire", "Q3", "Inbound", "Done", gmv, health, "sem vendas", "R$ 10.000,00", "120000", "Lançamento em nov"];
+
+test("relatório do Salesforce: lê todas as colunas, atualiza sem desfazer o que o time mudou no app, guarda histórico", () => {
+  const { app, como } = cenario();
+  const p = app.apiPreverImportacao(relatorio(acme("Welcome", "Green", "R$ 1.234,56")), {});
+  const campo = Object.fromEntries(p.colunas.map((c: { cabecalho: string; campo: string }) => [c.cabecalho, c.campo]));
+  assert.equal(campo["Onboarding Status"], "Etapa");
+  assert.equal(campo["Opportunity: Owner Name"], "Responsável");
+  assert.equal(campo["Hotmart ID"], "Hotmart ID");
+  assert.equal(campo["Days in onboarding"], ""); // o app calcula pelo Closed Date
+  assert.deepEqual(p.colunas.filter((c: { campo: string }) => !c.campo).map((c: { cabecalho: string }) => c.cabecalho), ["Days in onboarding"]);
+  app.apiImportarClientes(relatorio(acme("Welcome", "Green", "R$ 1.234,56")), {});
+  como("onb7@empresa.com");
+  let c = app.apiEstado().clientes.find((x: { id: string }) => x.id === "HM-1");
+  assert.equal(c.segmento, "7D"); // do owner, que é onboarder 7D
+  assert.equal(c.responsavelEmail, "onb7@empresa.com");
+  assert.equal(c.etapa, "Welcome");
+  assert.equal(c.info.gmv, 1234.56);
+  assert.equal(c.info.valor13, 10000);
+  assert.equal(c.info.closedDate, "2026-09-15");
+  assert.equal(c.info.health, "Green");
+  assert.equal(c.info.estrategia, "Lançamento em nov");
+
+  // O onboarder avança no app; a mesma planilha colada de novo NÃO volta a etapa.
+  app.apiMudarEtapa("HM-1", "Product Migration");
+  como(DONA);
+  assert.throws(() => app.apiImportarClientes(relatorio(acme("Welcome", "Green", "R$ 1.234,56")), {}), /Nada para importar/);
+  // Quando o Salesforce muda (Billing = Faturamento), aí sim atualiza.
+  const r = app.apiImportarClientes(relatorio(acme("Billing", "Red", "R$ 5.000,00")), {});
+  assert.deepEqual(r.importacao, { novos: 0, atualizados: 1, deFora: 0 });
+  c = r.clientes.find((x: { id: string }) => x.id === "HM-1");
+  assert.equal(c.etapa, "Faturamento");
+  assert.equal(c.info.health, "Red");
+  assert.equal(c.info.gmv, 5000);
+  como("onb7@empresa.com");
+  const h = app.apiCliente("HM-1").historico.map((x: { de: string; para: string; origem: string }) => [x.de, x.para, x.origem]);
+  assert.deepEqual(h.sort(), [["", "Welcome", "importação"], ["Product Migration", "Faturamento", "importação"], ["Welcome", "Product Migration", "app"]].sort());
+  como("onb8@empresa.com");
+  assert.throws(() => app.apiCliente("HM-1"), /não encontrado/);
+});
+
+test("sincronização: lê a aba Salesforce com as traduções da última importação do admin", () => {
+  const { app, fakes } = cenario();
+  assert.match(app.sincronizar().erro, /não existe/);
+  app.apiImportarClientes(relatorio(acme("Kickoff", "Green", "1")), { mapas: { etapa: { Kickoff: "Welcome" } } });
+  const ss = fakes.services.SpreadsheetApp.openById();
+  ss.insertSheet("Salesforce");
+  fakes.paste("Salesforce", [RELATORIO_CAB, acme("Kickoff", "Yellow", "2"), ["Beta", "HM-2", "01/10/2026", "Kickoff", "", "Rafael Lima"]]);
+  const r = app.sincronizar();
+  assert.equal(r.novos, 1);
+  assert.equal(r.atualizados, 1);
+  const e = app.apiEstado();
+  assert.equal(e.sincronizacao.ultima.novos, 1);
+  const beta = e.clientes.find((x: { id: string }) => x.id === "HM-2");
+  assert.equal(beta.etapa, "Welcome");
+  assert.equal(beta.segmento, "8D");
+  assert.equal(e.clientes.find((x: { id: string }) => x.id === "HM-1").info.health, "Yellow");
 });
 
 test("importar: liderança só nos seus segmentos; onboarder não importa; sem coluna de nome explica", () => {
@@ -358,7 +431,7 @@ test("importar: liderança só nos seus segmentos; onboarder não importa; sem c
   const colado = "Cliente\tSegmento\nA\t7D\nB\t8D";
   como("lider@empresa.com"); // 6D e 7D
   const p = app.apiPreverImportacao(colado, {});
-  assert.deepEqual(p.linhas.map((l: { situacao: string }) => l.situacao), ["aviso", "erro"]);
+  assert.deepEqual(p.linhas.map((l: { acao: string }) => l.acao), ["novo", "erro"]);
   assert.match(p.linhas[1].motivo, /8D não é um segmento seu/);
   assert.throws(() => app.apiPreverImportacao("Fulano\tCiclano\na\tb", {}), /coluna com o nome do cliente/);
   // CSV com ponto e vírgula e aspas
@@ -366,6 +439,17 @@ test("importar: liderança só nos seus segmentos; onboarder não importa; sem c
   assert.equal(app.apiPreverImportacao(csv, {}).linhas[0].nome, "Silva; Filhos");
   como("onb7@empresa.com");
   assert.throws(() => app.apiPreverImportacao(colado, {}), /não pode importar/);
+});
+
+test("números e etapas como vêm do Salesforce", () => {
+  const { app } = novoApp();
+  assert.equal(app.lerNumero_("R$ 1.234,56"), 1234.56);
+  assert.equal(app.lerNumero_("1,234.56"), 1234.56);
+  assert.equal(app.lerNumero_("1.234"), 1234);
+  assert.equal(app.lerNumero_("1,5"), 1.5);
+  assert.equal(app.lerNumero_("abc"), null);
+  assert.equal(app.lerEtapa_("Billing"), "Faturamento");
+  assert.equal(app.lerEtapa_("Activation and Monitoring"), "Activation & Monitoring");
 });
 
 test("responsável: liderança do segmento escolhe ou tira; precisa ser onboarder do segmento", () => {

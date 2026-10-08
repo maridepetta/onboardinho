@@ -5,13 +5,27 @@
 
 var ABAS = {
   Usuarios: ['email', 'nome', 'papel', 'segmentos', 'admin', 'liberado_por', 'liberado_em', 'confirmado_em'],
-  Clientes: ['id_externo', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde', 'link_analise'],
+  // hotmart_id se chamava id_externo: planilhas antigas continuam valendo (veja APELIDOS_COLUNA).
+  // etapa_origem / owner_origem: último valor que veio do Salesforce, para a importação não desfazer
+  // o que foi mudado no app (só aplica quando o Salesforce muda).
+  Clientes: ['hotmart_id', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde', 'link_analise']
+    .concat(CAMPOS_INFO.map(function (c) { return c[1]; }))
+    .concat(['etapa_origem', 'owner_origem', 'atualizado_em']),
+  Historico: ['quando', 'hotmart_id', 'cliente', 'de', 'para', 'por', 'origem'],
   Orientacoes: ['id', 'titulo', 'descricao', 'escopo', 'segmento', 'cliente', 'etapa', 'ref_manual',
     'prioridade', 'origem', 'status', 'criado_por', 'criado_em', 'concluida_por', 'concluida_em'],
   Pedidos: ['id', 'email', 'tipo', 'papel', 'segmentos', 'nota', 'status', 'criado_em', 'decidido_por', 'decidido_em']
 };
 
 var PROP_PLANILHA = 'PLANILHA_ID';
+
+/** Nomes antigos de coluna que continuam sendo lidos. */
+var APELIDOS_COLUNA = { id_externo: 'hotmart_id' };
+
+function nomeColuna_(c) {
+  var n = normalizarTexto_(c);
+  return APELIDOS_COLUNA[n] || n;
+}
 
 var NOME_PLANILHA = 'Onboardinho – dados';
 
@@ -58,8 +72,10 @@ function urlPlanilha_() {
 }
 
 function aba_(nome) {
-  var sh = planilha_().getSheetByName(nome);
-  if (!sh) throw new Error('Aba "' + nome + '" não encontrada. Rode "configurar" de novo.');
+  var ss = planilha_();
+  var sh = ss.getSheetByName(nome);
+  if (!sh && ABAS[nome]) { prepararAbas_(ss); sh = ss.getSheetByName(nome); } // aba nova numa versão nova
+  if (!sh) throw new Error('Aba "' + nome + '" não encontrada.');
   return sh;
 }
 
@@ -67,7 +83,7 @@ function aba_(nome) {
 function lerTabela_(nome) {
   var valores = aba_(nome).getDataRange().getValues();
   if (valores.length < 2) return [];
-  var cab = valores[0].map(function (c) { return normalizarTexto_(c); });
+  var cab = valores[0].map(nomeColuna_);
   var out = [];
   for (var i = 1; i < valores.length; i++) {
     var linha = valores[i];
@@ -95,7 +111,7 @@ function celulaSegura_(v) {
  */
 function cabecalho_(sh, nome) {
   var largura = sh.getLastColumn();
-  var cab = largura ? sh.getRange(1, 1, 1, largura).getValues()[0].map(normalizarTexto_) : [];
+  var cab = largura ? sh.getRange(1, 1, 1, largura).getValues()[0].map(nomeColuna_) : [];
   var faltam = ABAS[nome].filter(function (c) { return cab.indexOf(c) < 0; });
   if (faltam.length) {
     sh.getRange(1, cab.length + 1, 1, faltam.length).setValues([faltam]).setFontWeight('bold');
@@ -120,6 +136,29 @@ function inserirVarios_(nome, objs) {
     return cab.map(function (c) { return ABAS[nome].indexOf(c) >= 0 && obj[c] != null ? celulaSegura_(obj[c]) : ''; });
   });
   sh.getRange(sh.getLastRow() + 1, 1, linhas.length, cab.length).setValues(linhas);
+}
+
+/**
+ * Várias atualizações de uma vez (importação): lê a aba, muda em memória e grava tudo numa
+ * escrita só. Reaplica a proteção contra fórmula em todas as células, porque um texto salvo
+ * como "'=..." volta da leitura sem o apóstrofo.
+ * lista: [{ linha, mudancas: { coluna: valor } }]
+ */
+function atualizarVarios_(nome, lista) {
+  if (!lista.length) return;
+  var sh = aba_(nome);
+  var cab = cabecalho_(sh, nome);
+  var ultima = sh.getLastRow();
+  var faixa = sh.getRange(2, 1, ultima - 1, cab.length);
+  var dados = faixa.getValues();
+  lista.forEach(function (it) {
+    Object.keys(it.mudancas).forEach(function (col) {
+      var j = cab.indexOf(col);
+      if (j < 0 || ABAS[nome].indexOf(col) < 0) throw new Error('Coluna desconhecida: ' + col);
+      dados[it.linha - 2][j] = it.mudancas[col];
+    });
+  });
+  faixa.setValues(dados.map(function (linha) { return linha.map(celulaSegura_); }));
 }
 
 /** Atualiza só as colunas informadas da linha `linha`. */
@@ -206,7 +245,14 @@ function lerClientes_(usuarios) {
     if (!desde) erros.push('data "' + r.desde + '" inválida');
     if (erros.length) { problemas.push('Linha ' + r._linha + ': ' + erros.join('; ') + '.'); return; }
     if (aviso) avisos.push(aviso);
-    var idExterno = String(r.id_externo || '').trim();
+    var idExterno = String(r.hotmart_id || '').trim();
+    var info = {};
+    CAMPOS_INFO.forEach(function (c) {
+      var v = r[c[1]];
+      if (c[5] === 'data') info[c[0]] = v === '' || v == null ? '' : (lerData_(v) || '').slice(0, 10);
+      else if (c[5] === 'numero') { var n = lerNumero_(v); info[c[0]] = n !== null ? n : String(v == null ? '' : v).trim(); }
+      else info[c[0]] = String(v == null ? '' : v).trim();
+    });
     clientes.push({
       linha: r._linha,
       id: idExterno || nome,
@@ -217,10 +263,24 @@ function lerClientes_(usuarios) {
       etapa: etapa,
       desde: desde,
       linkAnalise: lerLinkAnalise_(r.link_analise) || '',
-      semDono: !dono || dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0
+      semDono: !dono || dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0,
+      info: info,
+      etapaOrigem: lerEtapa_(r.etapa_origem) || '',
+      ownerOrigem: String(r.owner_origem || '').trim(),
+      atualizadoEm: iso_(r.atualizado_em)
     });
   });
   return { clientes: clientes, problemas: problemas, avisos: avisos, totalLinhas: linhas.length };
+}
+
+/** Histórico de etapas, mais recente primeiro. */
+function lerHistorico_() {
+  return lerTabela_('Historico').map(function (r) {
+    return {
+      quando: iso_(r.quando), hotmartId: String(r.hotmart_id || '').trim(), cliente: String(r.cliente || '').trim(),
+      de: String(r.de || ''), para: String(r.para || ''), por: String(r.por || ''), origem: String(r.origem || '')
+    };
+  }).sort(function (a, b) { return a.quando < b.quando ? 1 : -1; });
 }
 
 function lerOrientacoes_() {

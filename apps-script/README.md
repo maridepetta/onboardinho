@@ -8,14 +8,21 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
 - **Banco:** uma planilha com 4 abas (`Usuarios`, `Clientes`, `Orientacoes`, `Pedidos`).
   **Não compartilhe a planilha com o time**: o app roda com a sua permissão e mostra a cada
   pessoa só o que ela pode ver (o segmento dela). Quem tiver a planilha vê tudo.
-- **Clientes:** na tela **Clientes → Colar da planilha**, copie as linhas da sua planilha ou da
-  exportação (com o cabeçalho) e cole. O app reconhece as colunas pelo nome ("Cliente", "Empresa",
-  "Nível", "Fase", "Onboarder"…), aceita nível N2–N6 no lugar do segmento, mostra uma prévia e só
-  grava quando você clica em **Importar**. Valores que ele não conhece (ex.: uma etapa "Kickoff")
-  você traduz na própria prévia. Cliente repetido (mesmo código, ou mesmo nome e segmento) fica de fora.
-  Cliente pode entrar **sem responsável**: a liderança ou o admin escolhe depois, na tabela.
-  Também dá para adicionar um por um (**Um cliente**) ou colar direto na aba `Clientes` com as colunas
-  `id_externo | nome | segmento | responsavel_email | etapa | desde | link_analise`.
+- **Clientes:** na tela **Clientes → Colar da planilha**, copie o relatório do Salesforce (ou qualquer
+  planilha) com o cabeçalho e cole. O app reconhece as colunas pelo nome — inclusive as do relatório de
+  onboarding (Name, Hotmart ID, Closed Date, Onboarding Status, Opportunity: Owner Name, GMV, Health,
+  Amount 1-3/12 months, Strategy…) — mostra uma prévia e só grava quando você clica em **Importar**.
+  - Cliente que já existe (mesmo **Hotmart ID**) é **atualizado**, não duplicado.
+  - Etapa e responsável só mudam quando mudaram na origem: o que o time muda no app não é desfeito
+    pela próxima colagem.
+  - Valores desconhecidos (ex.: uma etapa "Kickoff") você traduz na própria prévia; "Billing" já vira Faturamento.
+  - O relatório não tem segmento: ele vem do **owner**, se o owner estiver em Usuários como onboarder
+    (cadastre com o **mesmo nome** do Salesforce), ou do "segmento padrão" escolhido na prévia.
+- **Automático:** crie uma aba **`Salesforce`** na planilha e deixe o complemento *Data connector for
+  Salesforce* atualizá-la (ou cole o relatório nela). No editor, rode **`ativarSincronizacao`** uma vez:
+  o app lê essa aba de hora em hora. A situação aparece em **Clientes → Automático (Salesforce)**.
+- **Página do cliente:** clique no nome. Mostra negócio (GMV × previsto), saúde, origem, estratégia,
+  jornada (cada mudança de etapa fica na aba `Historico`) e orientações.
 - **Análise do cliente:** na tela Clientes, coluna **Análise → + Link**, cole o link do
   notebook do NotebookLM (ou Doc/Drive/Gemini) do cliente. Só aceita `https://…google.com`.
   O link aparece também no Início, ao lado do cliente. **O link não dá acesso:** compartilhe
@@ -41,7 +48,8 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
    - Quem pode acessar: **Qualquer pessoa em <sua empresa>**
 7. Copie o link que termina em `/exec`. É esse link que você manda para o time.
 
-Depois de mudar o código: **Implantar → Gerenciar implantações → editar (lápis) → Versão: Nova versão**.
+Depois de mudar o código: se o `appsscript.json` mudou (permissões novas), rode **`configurar`** no editor
+uma vez para autorizar. Depois: **Implantar → Gerenciar implantações → editar (lápis) → Versão: Nova versão**.
 Sem isso, o link continua com a versão antiga.
 
 **Testar antes de liberar para o time:** **Implantar → Testar implantações** dá um link que termina

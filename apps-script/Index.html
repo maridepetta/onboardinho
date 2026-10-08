@@ -100,7 +100,7 @@ legend { margin-bottom: 6px; padding: 0; }
 .brief-side p { margin: 0; font-size: 14px; color: var(--n800); }
 .tag-solid { padding: 5px 10px; background: var(--action); color: var(--bg); font-size: 12px; }
 .tag-outline { padding: 4px 10px; border: 1px solid var(--field); font-size: 12px; }
-.pipeline { list-style: none; margin: 0 var(--gutter); padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--divider); border-top: 2px solid var(--text); border-bottom: 2px solid var(--divider); }
+.pipeline { list-style: none; margin: 0 var(--gutter); padding: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 1px; background: var(--divider); border-top: 2px solid var(--text); border-bottom: 2px solid var(--divider); }
 .pipeline li { padding: 12px 14px; background: var(--bg); }
 .pipeline span { display: block; font-size: 12px; line-height: 1.3; }
 .pipeline strong { display: block; margin-top: 6px; font-size: 30px; font-weight: 800; line-height: 1; }
@@ -124,12 +124,11 @@ legend { margin-bottom: 6px; padding: 0; }
 @media (max-width: 1000px) {
   .brief-hello > :first-child, .brief-hello > :last-child { grid-column: 1 / -1; }
   .pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .pipeline li:last-child { grid-column: span 2; }
   .brief-cols { grid-template-columns: minmax(0, 1fr); }
   .brief-col, .brief-col:first-child, .brief-col:last-child { padding: 24px 0; }
   .brief-col + .brief-col { border-left: 0; border-top: 2px solid var(--divider); }
 }
-@media (max-width: 520px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pipeline li:last-child { grid-column: 1 / -1; } .pipeline strong { font-size: 24px; } }
+@media (max-width: 520px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pipeline strong { font-size: 24px; } }
 
 /* Resumo do dia (2b) */
 .split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 72px); }
@@ -182,6 +181,22 @@ td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); vertica
 .imp-sum strong { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 .tag-ok { background: var(--n200); color: var(--text); }
 .input-alert { border-color: var(--a700); }
+.link-cliente { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 800; text-align: left; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--divider); cursor: pointer; }
+.link-cliente:hover { color: var(--action); text-decoration-color: currentColor; }
+.saude-ruim { background: var(--action); color: var(--bg); }
+.saude-atencao { background: var(--a100); color: var(--a800); }
+.saude-boa { background: var(--n200); color: var(--text); }
+.ficha-topo { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px 24px; padding: 16px 0; border-top: 2px solid var(--text); border-bottom: 2px solid var(--divider); }
+.ficha-topo dt, .ficha dt { font-size: 12px; color: var(--n700); }
+.ficha-topo dd { margin: 4px 0 0; font-weight: 600; }
+.ficha-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px 40px; }
+.ficha-bloco { display: flex; flex-direction: column; gap: 12px; }
+.ficha { margin: 0; display: flex; flex-direction: column; }
+.ficha > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--divider); }
+.ficha dd { margin: 0; font-weight: 600; text-align: right; }
+.texto-longo { margin: 0; white-space: pre-wrap; max-width: 72ch; }
+.jornada { list-style: none; margin: 0; padding: 0; }
+.jornada li { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--divider); }
 .status { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 </style>
 </head>
@@ -206,7 +221,8 @@ function chamar(nome) {
 var SEGMENTOS = { '6D': 'Clientes N2 · N3', '7D': 'Clientes N4 · N5', '8D': 'Clientes N6+' };
 var ORDEM = ['6D', '7D', '8D'];
 var PAPEIS = { onboarder: 'Onboarder', lideranca: 'Liderança' };
-var ETAPAS = ['Pre Onboarding', 'Welcome', 'Product Migration', 'Ready for Activation', 'Activation & Monitoring', 'Accomplished', 'Unaccomplished'];
+var ETAPAS = ['Pre Onboarding', 'Welcome', 'Product Migration', 'Ready for Activation', 'Activation & Monitoring', 'Faturamento', 'Accomplished', 'Unaccomplished'];
+var ETAPAS_FINAIS = ['Accomplished', 'Unaccomplished'];
 
 // Cria elementos com texto seguro (nunca innerHTML com dados).
 function el(tag, attrs, filhos) {
@@ -413,9 +429,10 @@ function telaApp() {
     ['pedidos', S.paraDecidir.length ? 'Pedidos (' + S.paraDecidir.length + ')' : 'Pedidos', podeLideranca()],
     ['usuarios', 'Usuários', eu.admin]
   ].filter(function (p) { return p[2]; });
-  if (!paginas.some(function (p) { return p[0] === UI.pagina; })) UI.pagina = 'inicio';
+  var clienteAberto = UI.pagina === 'cliente' && clientesPorId()[UI.clienteId];
+  if (!clienteAberto && !paginas.some(function (p) { return p[0] === UI.pagina; })) UI.pagina = 'inicio';
 
-  var conteudo = {
+  var conteudo = clienteAberto ? paginaCliente(clienteAberto) : {
     inicio: paginaInicio, resumo: paginaResumo, clientes: paginaClientes, orientacao: paginaOrientacao,
     pedidos: paginaPedidos, usuarios: paginaUsuarios
   }[UI.pagina]();
@@ -470,7 +487,7 @@ function paginaInicio() {
   S.clientes.forEach(function (c) { porEtapa[c.etapa] += 1; });
   // Destaque: a etapa em andamento com mais clientes (Accomplished/Unaccomplished já acabaram).
   var destaque = null;
-  ETAPAS.slice(0, 5).forEach(function (et) { if (porEtapa[et] > 0 && (!destaque || porEtapa[et] >= porEtapa[destaque])) destaque = et; });
+  ETAPAS.filter(function (et) { return ETAPAS_FINAIS.indexOf(et) < 0; }).forEach(function (et) { if (porEtapa[et] > 0 && (!destaque || porEtapa[et] >= porEtapa[destaque])) destaque = et; });
 
   function meta(o) {
     var d = o.descricao.length > 90 ? o.descricao.slice(0, 88).trim() + '…' : o.descricao;
@@ -602,7 +619,7 @@ function itemFila(o, i, cliente) {
       ])
     ]),
     el('div', { class: 'side' }, cliente
-      ? [el('strong', { text: cliente.nome }), el('span', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') + ' na etapa' }),
+      ? [linkCliente(cliente), el('span', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') + ' na etapa' }),
         cliente.linkAnalise ? linkAnalise(cliente) : null, concluir]
       : [el('span', { text: o.segmento ? 'Segmento ' + o.segmento : 'Todos os times' }), concluir])
   ]);
@@ -654,7 +671,7 @@ function paginaClientes() {
                 } }, ETAPAS.map(function (et) { return el('option', { value: et, selected: et === c.etapa ? 'selected' : null, text: et }); }))
               : el('span', { text: c.etapa });
             return el('tr', {}, [
-              el('td', {}, [el('strong', { text: c.nome }), c.idExterno ? el('div', { class: 'muted', text: c.idExterno }) : null]),
+              el('td', {}, [linkCliente(c), el('div', { class: 'cell-actions muted' }, [c.idExterno ? el('span', { text: c.idExterno }) : null, c.info.health ? tagSaude(c.info.health) : null])]),
               el('td', { text: c.segmento }),
               el('td', {}, [celulaResponsavel(c)]),
               el('td', {}, [etapa]),
@@ -664,6 +681,106 @@ function paginaClientes() {
           }))
         ])
       ])
+    ])
+  ]);
+}
+
+function abrirCliente(id) {
+  UI.pagina = 'cliente';
+  UI.clienteId = id;
+  UI.detalhe = { id: id, carregando: true, historico: [] };
+  desenhar();
+  window.scrollTo(0, 0);
+  chamar('apiCliente', id).then(function (d) {
+    if (UI.detalhe && UI.detalhe.id === id) { UI.detalhe = { id: id, historico: d.historico }; desenhar(); }
+  }).catch(function (e) { avisar(e.message, true); });
+}
+
+function linkCliente(c) {
+  return el('button', { type: 'button', class: 'link-cliente', onclick: function () { abrirCliente(c.id); } }, [c.nome]);
+}
+
+/** Saúde do Salesforce em cor: vermelho/risco, amarelo/atenção, verde/ok. */
+function tagSaude(t) {
+  var k = String(t).toLowerCase();
+  var cls = /red|vermelh|risk|risco|critic|bad|ruim|churn/.test(k) ? 'saude-ruim' : /yellow|amarel|aten|attention|warn|medio|médio/.test(k) ? 'saude-atencao' : 'saude-boa';
+  return el('span', { class: 'tag ' + cls, text: t });
+}
+
+function dinheiro(v) {
+  return typeof v === 'number' ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : (v || '');
+}
+
+function paginaCliente(c) {
+  var info = c.info || {};
+  var det = UI.detalhe && UI.detalhe.id === c.id ? UI.detalhe : { carregando: true, historico: [] };
+  var dEtapa = dias(c.desde);
+  var dFech = info.closedDate ? dias(info.closedDate + 'T12:00:00Z') : null;
+  var orientacoes = S.orientacoes.filter(function (o) { return o.escopo === 'cliente' && o.cliente === c.id && o.status === 'ativa'; });
+  var rotulos = {};
+  (S.camposInfo || []).forEach(function (k) { rotulos[k.campo] = k.rotulo; });
+  function linhaInfo(campo, valor) {
+    if (valor === '' || valor === null || valor === undefined) return null;
+    return el('div', {}, [el('dt', { text: rotulos[campo] || campo }), el('dd', {}, [valor])]);
+  }
+  function bloco(titulo, filhos) {
+    filhos = filhos.filter(Boolean);
+    return filhos.length ? el('section', { class: 'ficha-bloco' }, [el('h2', { class: 'h2', text: titulo }), el('dl', { class: 'ficha' }, filhos)]) : null;
+  }
+  var ritmo = typeof info.gmv === 'number' && typeof info.valor13 === 'number' && info.valor13 > 0
+    ? Math.round(info.gmv / info.valor13 * 100) + '% do previsto para 1–3 meses' : '';
+  var etapa = c.podeEditar
+    ? el('select', { class: 'input', 'aria-label': 'Etapa de ' + c.nome, onchange: function (e) {
+        agir(chamar('apiMudarEtapa', c.id, e.target.value), c.nome + ' agora está em ' + e.target.value + '.').then(function (ok) { if (ok) abrirCliente(c.id); });
+      } }, ETAPAS.map(function (et) { return el('option', { value: et, selected: et === c.etapa ? 'selected' : null, text: et }); }))
+    : el('span', { text: c.etapa });
+
+  return el('main', { class: 'page' }, [
+    el('div', { class: 'stack' }, [
+      el('button', { type: 'button', class: 'more', style: 'align-self:flex-start;padding:0', onclick: function () { UI.pagina = 'clientes'; desenhar(); } }, ['← Clientes']),
+      el('p', { class: 'kicker', text: ['Segmento ' + c.segmento, c.idExterno ? 'Hotmart ID ' + c.idExterno : ''].filter(Boolean).join(' · ') }),
+      el('h1', { class: 'title', text: c.nome }),
+      info.health ? el('div', { class: 'cell-actions' }, [tagSaude(info.health), info.healthReason ? el('span', { text: info.healthReason }) : null]) : null
+    ]),
+    el('dl', { class: 'ficha-topo' }, [
+      el('div', {}, [el('dt', { text: 'Etapa' }), el('dd', {}, [etapa])]),
+      el('div', {}, [el('dt', { text: 'Na etapa' }), el('dd', { class: dEtapa > 10 ? 'late' : null, text: plural(dEtapa, 'dia', 'dias') })]),
+      el('div', {}, [el('dt', { text: 'Desde o fechamento' }), el('dd', { text: dFech === null ? '—' : plural(dFech, 'dia', 'dias') })]),
+      el('div', {}, [el('dt', { text: 'Responsável' }), el('dd', {}, [celulaResponsavel(c)])]),
+      el('div', {}, [el('dt', { text: 'Análise' }), el('dd', {}, [celulaAnalise(c)])])
+    ]),
+    el('div', { class: 'ficha-grid' }, [
+      bloco('Negócio', [
+        linhaInfo('gmv', dinheiro(info.gmv)),
+        linhaInfo('valor13', dinheiro(info.valor13)),
+        linhaInfo('valor12', dinheiro(info.valor12)),
+        ritmo ? el('div', {}, [el('dt', { text: 'Ritmo' }), el('dd', { text: ritmo })]) : null,
+        linhaInfo('taxaAtual', info.taxaAtual),
+        linhaInfo('plataformaAtual', info.plataformaAtual),
+        linhaInfo('closedDate', info.closedDate ? data(info.closedDate + 'T12:00:00Z') : '')
+      ]),
+      bloco('Saúde', [linhaInfo('health', info.health ? tagSaude(info.health) : ''), linhaInfo('healthReason', info.healthReason), linhaInfo('welcomeStatus', info.welcomeStatus)]),
+      bloco('Origem', [linhaInfo('criadoPor', info.criadoPor), linhaInfo('hotmartEvent', info.hotmartEvent), linhaInfo('inboundCampaign', info.inboundCampaign), linhaInfo('leadFlow', info.leadFlow)]),
+      info.estrategia ? el('section', { class: 'ficha-bloco' }, [el('h2', { class: 'h2', text: rotulos.estrategia || 'Estratégia' }), el('p', { class: 'texto-longo', text: info.estrategia })]) : null
+    ]),
+    el('section', { class: 'ficha-bloco' }, [
+      el('h2', { class: 'h2', text: 'Jornada' }),
+      det.carregando ? el('p', { class: 'muted', text: 'Carregando…' })
+        : det.historico.length === 0 ? el('p', { class: 'muted', text: 'Ainda sem mudanças de etapa registradas. Elas aparecem aqui a partir de agora.' })
+        : el('ol', { class: 'jornada' }, det.historico.map(function (h) {
+            return el('li', {}, [
+              el('span', { class: 'muted', text: new Date(h.quando).toLocaleDateString('pt-BR') }),
+              el('strong', { text: h.de ? h.de + ' → ' + h.para : 'Entrou em ' + h.para }),
+              el('span', { class: 'muted', text: h.origem === 'app' ? 'por ' + (h.porNome || h.por) : h.origem === 'salesforce' ? 'pelo Salesforce' : 'importação' + (h.porNome ? ' (' + h.porNome + ')' : '') })
+            ]);
+          }))
+    ]),
+    el('section', { class: 'ficha-bloco' }, [
+      el('h2', { class: 'h2', text: 'Orientações ativas' }),
+      orientacoes.length === 0 ? el('p', { class: 'muted', text: 'Nenhuma orientação para este cliente agora.' })
+        : el('ul', { class: 'jornada' }, orientacoes.map(function (o) {
+            return el('li', {}, [el('strong', { text: o.titulo }), o.descricao ? el('span', { text: o.descricao }) : null, o.refManual ? el('span', { class: 'muted', text: o.refManual }) : null]);
+          }))
     ])
   ]);
 }
@@ -703,10 +820,34 @@ function entradaClientes() {
   var modo = UI.modoEntrada || 'colar';
   return el('section', { class: 'panel' }, [
     el('h2', { class: 'h2', text: 'Colocar clientes' }),
-    el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Como colocar clientes' }, [['colar', 'Colar da planilha (vários)'], ['um', 'Um cliente']].map(function (m) {
+    el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Como colocar clientes' }, [['colar', 'Colar da planilha (vários)'], ['um', 'Um cliente']]
+      .concat(S.sincronizacao ? [['auto', 'Automático (Salesforce)']] : []).map(function (m) {
       return el('button', { type: 'button', role: 'tab', 'aria-selected': String(modo === m[0]), text: m[1], onclick: function () { UI.modoEntrada = m[0]; desenhar(); } });
     })),
-    modo === 'colar' ? painelImportar() : formCliente()
+    modo === 'colar' ? painelImportar() : modo === 'auto' && S.sincronizacao ? painelSincronizacao() : formCliente()
+  ]);
+}
+
+/** Admin: situação da atualização automática pela aba "Salesforce". */
+function painelSincronizacao() {
+  var sx = S.sincronizacao;
+  var u = sx.ultima;
+  return el('div', { class: 'stack' }, [
+    el('p', { class: 'lead', style: 'font-size:15px', text: 'O app lê a aba "' + sx.aba + '" da planilha e atualiza os clientes: novos entram, etapa/saúde/GMV mudam quando mudam no Salesforce. ' +
+      'Mudanças feitas aqui no app não são desfeitas enquanto o Salesforce não mudar aquele campo.' }),
+    el('ol', { class: 'imp-steps' }, [
+      el('li', {}, [el('strong', { text: sx.abaExiste ? 'Aba "' + sx.aba + '": ok. ' : 'Crie a aba "' + sx.aba + '" na planilha (link "Abrir a planilha" acima). ' }),
+        'Para ela se atualizar sozinha: na planilha, Extensões → Complementos → "Data connector for Salesforce", importe o relatório de onboarding nessa aba e ligue a atualização automática. Também dá para colar o relatório nela à mão.']),
+      el('li', {}, [el('strong', { text: sx.ativa ? 'Atualização de hora em hora: ligada. ' : 'Atualização de hora em hora: desligada. ' }),
+        sx.ativa ? 'Para desligar, rode desativarSincronizacao no editor do Apps Script.' : 'Para ligar, no editor do Apps Script escolha a função ativarSincronizacao e clique em Executar (uma vez só).']),
+      el('li', { text: 'As traduções de etapa/segmento que você fizer na prévia de "Colar da planilha" são usadas aqui também.' })
+    ]),
+    u ? el('p', { class: u.erro ? 'warn' : 'notice', text: 'Última vez: ' + new Date(u.quando).toLocaleString('pt-BR') + ' · ' +
+      (u.erro ? u.erro : [plural(u.novos, 'novo', 'novos'), plural(u.atualizados, 'atualizado', 'atualizados'), u.erros ? plural(u.erros, 'linha com erro', 'linhas com erro') : ''].filter(Boolean).join(' · ')) }) : null,
+    u && u.problemas && u.problemas.length ? el('ul', { class: 'imp-steps' }, u.problemas.map(function (t) { return el('li', { text: t }); })) : null,
+    el('div', { class: 'actions' }, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Sincronizar agora', onclick: function () {
+      agir(chamar('apiSincronizarAgora'), 'Sincronização feita.');
+    } })])
   ]);
 }
 
@@ -729,10 +870,11 @@ function painelImportar() {
   function importar() {
     agir(chamar('apiImportarClientes', imp.texto, opcoes())).then(function (ok) {
       if (!ok) return;
-      var r = S.importacao || { importados: 0, deFora: 0 };
+      var r = S.importacao || { novos: 0, atualizados: 0, deFora: 0 };
       UI.imp = null;
       desenhar();
-      avisar(plural(r.importados, 'cliente importado', 'clientes importados') + (r.deFora ? '; ' + r.deFora + ' ficaram de fora.' : '.'));
+      avisar([r.novos ? plural(r.novos, 'cliente novo', 'clientes novos') : '', r.atualizados ? plural(r.atualizados, 'atualizado', 'atualizados') : ''].filter(Boolean).join(', ') +
+        (r.deFora ? '; ' + r.deFora + ' ficaram de fora.' : '.'));
     });
   }
   function seletor(id, rotulo, valor, lista, onchange) {
@@ -744,13 +886,13 @@ function painelImportar() {
   var p = imp.previa;
   return el('div', { class: 'stack' }, [
     el('ol', { class: 'imp-steps' }, [
-      el('li', { text: 'Abra a sua planilha ou a exportação do Astrobox.' }),
+      el('li', { text: 'Abra o relatório do Salesforce (ou a sua planilha).' }),
       el('li', { text: 'Selecione as linhas dos clientes junto com a linha do cabeçalho (Ctrl+A seleciona tudo) e copie (Ctrl+C).' }),
       el('li', { text: 'Cole aqui (Ctrl+V) e clique em Ver prévia. Nada é gravado até você clicar em Importar.' })
     ]),
     el('div', { class: 'field' }, [
       el('label', { for: 'imp-texto', text: 'Linhas copiadas da planilha' }),
-      el('textarea', { id: 'imp-texto', class: 'input imp-texto', spellcheck: 'false', placeholder: 'Cliente\tCódigo\tSegmento\tResponsável\tEtapa\tDesde\nLumen Saúde\tAB-1042\tN4\tmarina@empresa.com\tWelcome\t01/10/2026', oninput: function (e) {
+      el('textarea', { id: 'imp-texto', class: 'input imp-texto', spellcheck: 'false', placeholder: 'Name\tHotmart ID\tClosed Date\tOnboarding Status\tOpportunity: Owner Name\tOnboarding Health …\nLumen Saúde\t12345\t15/09/2026\tWelcome\tMarina Costa\tGreen …', oninput: function (e) {
         imp.texto = e.target.value;
         if (imp.previa) {
           imp.previa = null;
@@ -772,10 +914,10 @@ function painelImportar() {
 
 function previaImportacao(p, imp, prever, importar) {
   var c = p.contagem;
-  var entram = c.ok + c.aviso;
-  var ordem = { erro: 0, aviso: 1, repetido: 2, ok: 3 };
-  var linhas = p.linhas.slice().sort(function (a, b) { return ordem[a.situacao] - ordem[b.situacao] || a.linha - b.linha; });
-  var rotulo = { ok: ['Entra', 'tag-ok'], aviso: ['Entra, com aviso', 'tag-stage'], repetido: ['Já existe', 'tag-manual'], erro: ['Fica de fora', 'tag-stale'] };
+  var entram = c.novo + c.atualiza;
+  var ordem = { erro: 0, repetido: 1, novo: 2, atualiza: 3, igual: 4 };
+  var linhas = p.linhas.slice().sort(function (a, b) { return ordem[a.acao] - ordem[b.acao] || (b.comAviso ? 1 : 0) - (a.comAviso ? 1 : 0) || a.linha - b.linha; });
+  var rotulo = { novo: ['Novo', 'tag-ok'], atualiza: ['Atualiza', 'tag-stage'], igual: ['Sem mudança', 'tag-manual'], repetido: ['Repetido', 'tag-manual'], erro: ['Fica de fora', 'tag-stale'] };
   function mapear(tipo, valores, lista) {
     return valores.map(function (v) {
       return el('div', { class: 'field' }, [el('label', { text: (tipo === 'etapa' ? 'Etapa' : 'Segmento') + ' "' + v + '" da planilha é:' }),
@@ -786,8 +928,8 @@ function previaImportacao(p, imp, prever, importar) {
   var desconhecidas = mapear('etapa', p.desconhecidos.etapa, ETAPAS).concat(mapear('segmento', p.desconhecidos.segmento, S.segmentosCadastro));
   return el('div', { id: 'imp-previa', class: 'stack imp-previa' }, [
     el('h3', { class: 'imp-sum' }, [
-      el('strong', { text: plural(entram, 'cliente vai entrar', 'clientes vão entrar') }),
-      el('span', { text: [c.aviso ? c.aviso + ' com aviso' : '', c.repetido ? c.repetido + ' já cadastrado' + (c.repetido > 1 ? 's' : '') : '', c.erro ? c.erro + ' com erro (ficam de fora)' : ''].filter(Boolean).join(' · ') })
+      el('strong', { text: [c.novo ? plural(c.novo, 'cliente novo', 'clientes novos') : '', c.atualiza ? plural(c.atualiza, 'atualização', 'atualizações') : ''].filter(Boolean).join(' e ') || 'Nada muda' }),
+      el('span', { text: [c.igual ? c.igual + ' sem mudança' : '', c.comAviso ? c.comAviso + ' com aviso' : '', c.repetido ? c.repetido + ' repetido' + (c.repetido > 1 ? 's' : '') : '', c.erro ? c.erro + ' com erro (ficam de fora)' : ''].filter(Boolean).join(' · ') })
     ]),
     el('p', { class: 'muted', text: 'Colunas: ' + p.colunas.map(function (k) { return '"' + k.cabecalho + '" → ' + (k.campo || 'ignorada'); }).join(' · ') +
       (p.faltando.length ? '. Não encontrei: ' + p.faltando.join(', ') + '.' : '.') }),
@@ -802,14 +944,15 @@ function previaImportacao(p, imp, prever, importar) {
           el('td', { text: l.responsavelTexto || '—' }),
           el('td', { text: l.etapa || '—' }),
           el('td', { text: l.desde ? data(l.desde + 'T12:00:00Z') : '—' }),
-          el('td', {}, [el('span', { class: 'tag ' + rotulo[l.situacao][1], text: rotulo[l.situacao][0] }), l.motivo ? el('div', { class: 'muted', text: l.motivo }) : null])
+          el('td', {}, [el('span', { class: 'tag ' + rotulo[l.acao][1], text: rotulo[l.acao][0] }),
+            l.mudancas ? el('div', { text: l.mudancas }) : null, l.motivo ? el('div', { class: 'muted', text: l.motivo }) : null])
         ]);
       }))
     ])]),
     linhas.length > 300 ? el('p', { class: 'muted', text: 'Mostrando 300 de ' + linhas.length + ' linhas (os problemas aparecem primeiro).' }) : null,
     el('div', { class: 'actions' }, [
       el('button', { class: 'btn btn-primary btn-wide', type: 'button', disabled: entram ? null : true, onclick: importar },
-        [entram ? 'Importar ' + plural(entram, 'cliente', 'clientes') : 'Nada para importar', el('span', { 'aria-hidden': 'true', text: '→' })]),
+        [entram ? 'Importar (' + entram + ')' : 'Nada para importar', el('span', { 'aria-hidden': 'true', text: '→' })]),
       el('button', { class: 'btn btn-secondary', type: 'button', text: 'Limpar', onclick: function () { UI.imp = null; desenhar(); } })
     ])
   ]);
@@ -827,7 +970,7 @@ function formCliente() {
     });
   } }, [
     el('div', { class: 'field' }, [el('label', { for: 'c-nome', text: 'Nome do cliente' }), el('input', { id: 'c-nome', class: 'input', required: true, maxlength: '140', value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
-    el('div', { class: 'field' }, [el('label', { for: 'c-id', text: 'Código no Astrobox (opcional)' }), el('input', { id: 'c-id', class: 'input', maxlength: '60', value: f.idExterno, oninput: function (e) { f.idExterno = e.target.value; } })]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-id', text: 'Hotmart ID (opcional)' }), el('input', { id: 'c-id', class: 'input', maxlength: '60', value: f.idExterno, oninput: function (e) { f.idExterno = e.target.value; } })]),
     el('div', { class: 'field' }, [el('label', { for: 'c-seg', text: 'Segmento' }),
       el('select', { id: 'c-seg', class: 'input', onchange: function (e) { f.segmento = e.target.value; f.responsavelEmail = ''; desenhar(); } }, segs.map(function (sg) {
         return el('option', { value: sg, selected: sg === f.segmento ? 'selected' : null, text: sg + ' · ' + SEGMENTOS[sg] });
