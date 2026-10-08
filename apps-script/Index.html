@@ -89,7 +89,49 @@ legend { margin-bottom: 6px; padding: 0; }
 .panel { padding-top: 20px; border-top: 2px solid var(--text); display: flex; flex-direction: column; gap: 16px; }
 .form.panel { display: grid; }
 
-/* Início (2b) */
+/* Início (2a): briefing em grid */
+.brief { display: flex; flex-direction: column; min-height: calc(100vh - 72px); }
+.brief-hello { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px 24px; align-items: end; padding: 36px var(--gutter) 28px; }
+.brief-hello > :first-child { grid-column: span 8; display: flex; flex-direction: column; gap: 10px; }
+.brief-hello > :last-child { grid-column: span 4; }
+.brief-h1 { margin: 0; font-size: clamp(36px, 5vw, 64px); font-weight: 800; line-height: 1; letter-spacing: -0.035em; }
+.brief-h1 span { display: block; }
+.brief-side .tags { margin: 0 0 10px; }
+.brief-side p { margin: 0; font-size: 14px; color: var(--n800); }
+.tag-solid { padding: 5px 10px; background: var(--action); color: var(--bg); font-size: 12px; }
+.tag-outline { padding: 4px 10px; border: 1px solid var(--field); font-size: 12px; }
+.pipeline { list-style: none; margin: 0 var(--gutter); padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--divider); border-top: 2px solid var(--text); border-bottom: 2px solid var(--divider); }
+.pipeline li { padding: 12px 14px; background: var(--bg); }
+.pipeline span { display: block; font-size: 12px; line-height: 1.3; }
+.pipeline strong { display: block; margin-top: 6px; font-size: 30px; font-weight: 800; line-height: 1; }
+.pipeline .zero strong { color: var(--n600); }
+.pipeline .hot { background: var(--action); color: var(--bg); }
+.brief-cols { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 var(--gutter); }
+.brief-col { min-width: 0; padding: 24px 24px 32px; }
+.brief-col:first-child { padding-left: 0; }
+.brief-col:last-child { padding-right: 0; }
+.brief-col + .brief-col { border-left: 2px solid var(--divider); }
+.col-head { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 12px; font-size: 11px; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; }
+.col-head.hot { color: var(--a700); }
+.brief-item { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid var(--divider); background: none; color: inherit; text-align: left; cursor: pointer; }
+.brief-item strong { font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; }
+.brief-item span { font-size: 13px; color: var(--n700); }
+.brief-item span.late { color: var(--a700); }
+.brief-item:hover strong { color: var(--action); }
+.more { padding: 14px 0; border: 0; background: none; color: var(--a700); font-size: 13px; font-weight: 600; cursor: pointer; }
+.more:hover { text-decoration: underline; }
+.brief-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px var(--gutter); border-top: 2px solid var(--divider); }
+@media (max-width: 1000px) {
+  .brief-hello > :first-child, .brief-hello > :last-child { grid-column: 1 / -1; }
+  .pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pipeline li:last-child { grid-column: span 2; }
+  .brief-cols { grid-template-columns: minmax(0, 1fr); }
+  .brief-col, .brief-col:first-child, .brief-col:last-child { padding: 24px 0; }
+  .brief-col + .brief-col { border-left: 0; border-top: 2px solid var(--divider); }
+}
+@media (max-width: 520px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pipeline li:last-child { grid-column: 1 / -1; } .pipeline strong { font-size: 24px; } }
+
+/* Resumo do dia (2b) */
 .split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 72px); }
 .poster { flex: 5 1 340px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: 36px var(--gutter); background: var(--action); color: var(--bg); }
 .poster-main { margin-top: auto; display: flex; flex-direction: column; gap: 20px; }
@@ -357,6 +399,7 @@ function telaApp() {
   var eu = S.eu;
   var paginas = [
     ['inicio', 'Início', true],
+    ['resumo', 'Resumo do dia', true],
     ['clientes', podeLideranca() ? 'Clientes' : 'Meus clientes', true],
     ['orientacao', 'Nova orientação', podeLideranca()],
     ['meu-acesso', 'Meu acesso', true],
@@ -366,7 +409,7 @@ function telaApp() {
   if (!paginas.some(function (p) { return p[0] === UI.pagina; })) UI.pagina = 'inicio';
 
   var conteudo = {
-    inicio: paginaInicio, clientes: paginaClientes, orientacao: paginaOrientacao,
+    inicio: paginaInicio, resumo: paginaResumo, clientes: paginaClientes, orientacao: paginaOrientacao,
     pedidos: paginaPedidos, usuarios: paginaUsuarios
   }[UI.pagina]();
 
@@ -382,7 +425,109 @@ function telaApp() {
   ]);
 }
 
+function saudacao() {
+  var hora = new Date().getHours();
+  return (hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + S.eu.nome.split(' ')[0] + '.';
+}
+
+/** Abre o Resumo do dia na aba certa e leva até a orientação, se houver. */
+function abrirNoResumo(aba, idOrientacao) {
+  UI.pagina = 'resumo';
+  UI.aba = aba;
+  desenhar();
+  var alvo = idOrientacao ? document.querySelector('[data-oid="' + CSS.escape(idOrientacao) + '"]') : document.getElementById('item-1');
+  if (alvo) { alvo.scrollIntoView({ block: 'center' }); alvo.focus({ preventScroll: true }); }
+  else window.scrollTo(0, 0);
+}
+
+/** Início (2a): o dia numa tela só. Etapas no topo, orientações em três colunas. */
 function paginaInicio() {
+  var eu = S.eu;
+  var lider = podeLideranca();
+  var gerais = fila('geral');
+  var time = fila('time');
+  var carteira = fila('carteira');
+  var porCliente = clientesPorId();
+  // Uma linha por cliente: a orientação mais urgente dele (a fila já vem ordenada).
+  var vistos = {};
+  var clientesHoje = carteira.filter(function (o) {
+    if (vistos[o.cliente]) return false;
+    vistos[o.cliente] = true;
+    return true;
+  });
+  var total = gerais.length + time.length + carteira.length;
+  var pendente = S.meusPedidos.filter(function (p) { return p.status === 'pendente'; })[0];
+
+  var porEtapa = {};
+  ETAPAS.forEach(function (et) { porEtapa[et] = 0; });
+  S.clientes.forEach(function (c) { porEtapa[c.etapa] += 1; });
+  // Destaque: a etapa em andamento com mais clientes (Accomplished/Unaccomplished já acabaram).
+  var destaque = null;
+  ETAPAS.slice(0, 5).forEach(function (et) { if (porEtapa[et] > 0 && (!destaque || porEtapa[et] >= porEtapa[destaque])) destaque = et; });
+
+  function meta(o) {
+    var d = o.descricao.length > 90 ? o.descricao.slice(0, 88).trim() + '…' : o.descricao;
+    return [d, o.refManual].filter(Boolean).join(' · ');
+  }
+  function coluna(titulo, itens, aba, desenhoItem, quente) {
+    var max = 3;
+    return el('section', { class: 'brief-col', 'aria-label': titulo }, [
+      el('h2', { class: 'col-head' + (quente ? ' hot' : '') }, [el('span', { text: titulo }), el('span', { text: String(itens.length) })]),
+      itens.length === 0 ? el('p', { class: 'muted', style: 'padding: 14px 0', text: 'Nada por aqui hoje.' }) : null,
+      el('div', {}, itens.slice(0, max).map(function (o) {
+        var t = desenhoItem(o);
+        return el('button', { type: 'button', class: 'brief-item', onclick: function () { abrirNoResumo(aba, o.id); } }, [
+          el('strong', { text: t[0] }), t[1] ? el('span', { class: t[2] ? 'late' : null, text: t[1] }) : null
+        ]);
+      })),
+      itens.length > max ? el('button', { type: 'button', class: 'more', onclick: function () { abrirNoResumo(aba); } }, [
+        '+ ' + (aba === 'carteira' ? plural(itens.length - max, 'cliente', 'clientes') : plural(itens.length - max, 'orientação', 'orientações')) + ' ',
+        el('span', { 'aria-hidden': 'true', text: '→' })
+      ]) : null
+    ]);
+  }
+
+  return el('main', { class: 'brief' }, [
+    el('div', { class: 'brief-hello' }, [
+      el('div', {}, [
+        el('p', { class: 'kicker', text: new Date(S.agora).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) }),
+        el('h1', { class: 'brief-h1' }, [
+          el('span', { text: saudacao() }),
+          el('span', { text: total === 0 ? 'Nenhuma orientação para hoje.' : plural(total, 'orientação', 'orientações') + ' para hoje.' })
+        ])
+      ]),
+      el('div', { class: 'brief-side' }, [
+        el('div', { class: 'tags' }, [el('span', { class: 'tag tag-solid', text: (eu.segmentos.length > 1 ? 'Segmentos ' : 'Segmento ') + eu.segmentos.join(' + ') })]
+          .concat(eu.segmentos.map(function (sg) { return el('span', { class: 'tag tag-outline', text: SEGMENTOS[sg] }); }))),
+        el('p', { text: lider
+          ? 'Números do time inteiro. As orientações seguem o manual e a etapa em que cada cliente está.'
+          : 'As orientações seguem o manual do time e a etapa em que cada cliente seu está.' })
+      ])
+    ]),
+    pendente ? el('p', { class: 'notice', style: 'margin: 0 var(--gutter) 20px', text: 'Seu pedido de ajuste está aguardando resposta: ' + descPedido(pendente) + '.' }) : null,
+    el('ul', { class: 'pipeline', 'aria-label': (lider ? 'Clientes do time' : 'Seus clientes') + ' por etapa' }, ETAPAS.map(function (et) {
+      var n = porEtapa[et];
+      return el('li', { class: (et === destaque ? 'hot' : '') + (n === 0 ? ' zero' : '') }, [el('span', { text: et }), el('strong', { text: String(n) })]);
+    })),
+    el('div', { class: 'brief-cols' }, [
+      coluna('Gerais · todos os times', gerais, 'geral', function (o) { return [o.titulo, meta(o)]; }),
+      coluna('Time ' + eu.segmentos.join(' + ') + ' · ' + eu.segmentos.map(function (sg) { return SEGMENTOS[sg].replace('Clientes ', ''); }).join(' · '), time, 'time', function (o) { return [o.titulo, meta(o)]; }),
+      coluna(lider ? 'Clientes do time hoje' : 'Seus clientes hoje', clientesHoje, 'carteira', function (o) {
+        var c = porCliente[o.cliente];
+        var d = dias(c.desde);
+        return [c.nome + ': ' + o.titulo, c.etapa + ' · ' + plural(d, 'dia', 'dias') + ' na etapa', d > 10];
+      }, true)
+    ]),
+    el('div', { class: 'brief-foot' }, [
+      el('button', { class: 'btn btn-primary btn-wide', type: 'button', onclick: function () { abrirNoResumo('carteira'); } },
+        ['Começar pelos clientes', el('span', { 'aria-hidden': 'true', text: '→' })]),
+      el('p', { class: 'muted', text: 'O Resumo do dia mostra a fila completa, em ordem de urgência.' })
+    ])
+  ]);
+}
+
+/** Resumo do dia (2b): pôster + fila priorizada. */
+function paginaResumo() {
   var eu = S.eu;
   var lider = eu.papel === 'lideranca' || eu.admin;
   var carteira = fila('carteira');
@@ -392,7 +537,6 @@ function paginaInicio() {
   carteira.forEach(function (o) { precisam[o.cliente] = true; });
   var n = Object.keys(precisam).length;
   var agora = new Date(S.agora);
-  var hora = new Date().getHours();
   var frase = n === 0
     ? (lider ? 'Nenhum cliente do time com ação hoje.' : 'Nenhum cliente seu precisa de ação hoje.')
     : lider ? plural(n, 'cliente do time precisa', 'clientes do time precisam') + ' de ação hoje.'
@@ -404,7 +548,7 @@ function paginaInicio() {
     el('section', { class: 'poster', 'aria-labelledby': 'ola' }, [
       el('div', { class: 'poster-main' }, [
         el('p', { class: 'date', text: agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) }),
-        el('h1', { id: 'ola', class: 'big', text: (hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + eu.nome.split(' ')[0] + '.' }),
+        el('h1', { id: 'ola', class: 'big', text: saudacao() }),
         el('p', { class: 'headline', text: frase })
       ]),
       el('dl', { class: 'facts' }, [
@@ -438,7 +582,7 @@ function itemFila(o, i, cliente) {
   var concluir = o.podeConcluir ? el('button', { class: 'btn btn-secondary', type: 'button', text: o.escopo === 'cliente' ? 'Feito' : 'Arquivar', onclick: function () {
     agir(chamar('apiConcluirOrientacao', o.id), o.escopo === 'cliente' ? 'Marcada como feita.' : 'Arquivada.');
   } }) : null;
-  return el('li', { class: 'item', id: 'item-' + (i + 1), tabindex: '-1' }, [
+  return el('li', { class: 'item', id: 'item-' + (i + 1), 'data-oid': o.id, tabindex: '-1' }, [
     el('span', { class: 'num' + (i === 0 ? ' first' : ''), 'aria-hidden': 'true', text: String(i + 1).padStart(2, '0') }),
     el('div', {}, [
       el('h2', { text: o.titulo }),

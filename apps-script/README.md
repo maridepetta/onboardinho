@@ -44,6 +44,9 @@ Sem isso, o link continua com a versão antiga.
 ## Uso
 
 - Cadastre as pessoas em **Usuários** (dentro do app). Elas entram pelo link com a conta Google.
+- **Início:** o dia numa tela só: clientes por etapa e orientações em três colunas (gerais,
+  time, clientes). Clicar numa orientação abre o **Resumo do dia** nela.
+- **Resumo do dia:** a fila completa em ordem de urgência, com **Feito**/**Arquivar**.
 - No primeiro acesso, a pessoa confirma o papel e o segmento ou pede ajuste.
 - Liderança e admin publicam orientações em **Nova orientação**.
 - O onboarder marca a orientação do cliente como **Feito**.
