@@ -5,7 +5,7 @@
 
 var ABAS = {
   Usuarios: ['email', 'nome', 'papel', 'segmentos', 'admin', 'liberado_por', 'liberado_em', 'confirmado_em'],
-  Clientes: ['id_externo', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde'],
+  Clientes: ['id_externo', 'nome', 'segmento', 'responsavel_email', 'etapa', 'desde', 'link_analise'],
   Orientacoes: ['id', 'titulo', 'descricao', 'escopo', 'segmento', 'cliente', 'etapa', 'ref_manual',
     'prioridade', 'origem', 'status', 'criado_por', 'criado_em', 'concluida_por', 'concluida_em'],
   Pedidos: ['id', 'email', 'tipo', 'papel', 'segmentos', 'nota', 'status', 'criado_em', 'decidido_por', 'decidido_em']
@@ -88,21 +88,36 @@ function celulaSegura_(v) {
   return v;
 }
 
-function linhaDe_(nome, obj) {
-  return ABAS[nome].map(function (c) { return celulaSegura_(obj[c] == null ? '' : obj[c]); });
+/**
+ * Cabeçalho real da aba. Grava pelo nome da coluna, não pela posição: a exportação colada
+ * pode vir em outra ordem, e planilhas antigas não têm as colunas novas (ex.: link_analise).
+ * Coluna que falta é criada no fim.
+ */
+function cabecalho_(sh, nome) {
+  var largura = sh.getLastColumn();
+  var cab = largura ? sh.getRange(1, 1, 1, largura).getValues()[0].map(normalizarTexto_) : [];
+  var faltam = ABAS[nome].filter(function (c) { return cab.indexOf(c) < 0; });
+  if (faltam.length) {
+    sh.getRange(1, cab.length + 1, 1, faltam.length).setValues([faltam]).setFontWeight('bold');
+    cab = cab.concat(faltam);
+  }
+  return cab;
 }
 
 function inserir_(nome, obj) {
-  aba_(nome).appendRow(linhaDe_(nome, obj));
+  var sh = aba_(nome);
+  sh.appendRow(cabecalho_(sh, nome).map(function (c) {
+    return ABAS[nome].indexOf(c) >= 0 && obj[c] != null ? celulaSegura_(obj[c]) : '';
+  }));
 }
 
 /** Atualiza só as colunas informadas da linha `linha`. */
 function atualizar_(nome, linha, mudancas) {
   var sh = aba_(nome);
+  var cab = cabecalho_(sh, nome);
   Object.keys(mudancas).forEach(function (col) {
-    var j = ABAS[nome].indexOf(col);
-    if (j < 0) throw new Error('Coluna desconhecida: ' + col);
-    sh.getRange(linha, j + 1).setValue(celulaSegura_(mudancas[col]));
+    if (ABAS[nome].indexOf(col) < 0) throw new Error('Coluna desconhecida: ' + col);
+    sh.getRange(linha, cab.indexOf(col) + 1).setValue(celulaSegura_(mudancas[col]));
   });
 }
 
@@ -183,7 +198,8 @@ function lerClientes_(usuarios) {
       segmento: segmento,
       responsavelEmail: email,
       etapa: etapa,
-      desde: desde
+      desde: desde,
+      linkAnalise: lerLinkAnalise_(r.link_analise) || ''
     });
   });
   return { clientes: clientes, problemas: problemas, avisos: avisos, totalLinhas: linhas.length };

@@ -41,6 +41,7 @@
     };
     Sheet.prototype.appendRow = function (arr) { this.rows.push(arr.map(store)); return this; };
     Sheet.prototype.getLastRow = function () { return this.rows.length; };
+  Sheet.prototype.getLastColumn = function () { return this.width(); };
     Sheet.prototype.setFrozenRows = function () { return this; };
     Sheet.prototype.getRange = function (r, c, nr, nc) {
       var rows = this.rows;
@@ -53,6 +54,16 @@
         row[c - 1 + j] = store(v);
       }
       var range = {
+        getValues: function () {
+          var out = [];
+          for (var i = 0; i < nr; i++) {
+            var row = rows[r - 1 + i] || [];
+            var linha = [];
+            for (var j = 0; j < nc; j++) linha.push(row[c - 1 + j] === undefined ? '' : row[c - 1 + j]);
+            out.push(linha);
+          }
+          return out;
+        },
         setValues: function (vals) {
           for (var i = 0; i < nr; i++) for (var j = 0; j < nc; j++) cell(i, j, vals[i][j]);
           return range;

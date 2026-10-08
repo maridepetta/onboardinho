@@ -255,3 +255,47 @@ test("datas como vêm de exportações: com hora, ano com 2 dígitos", () => {
   assert.equal(app.lerData_("2026-10-01T03:00:00.000Z"), "2026-10-01T12:00:00.000Z");
   assert.equal(app.lerData_("31/02/2026"), null);
 });
+
+test("link da análise: só https do Google, só quem edita o cliente; aparece para quem vê", () => {
+  const { app, como, fakes } = cenario();
+  const nb = "https://notebooklm.google.com/notebook/abc-123";
+  como("onb8@empresa.com");
+  assert.throws(() => app.apiDefinirLinkAnalise("AB-1", nb), /não encontrado|não pode/);
+  como("onb7@empresa.com");
+  for (const ruim of ["javascript:alert(1)", "http://notebooklm.google.com/x", "https://google.com.golpe.io/x", "https://evil.com@docs.google.com/x", "https://golpe.io/?google.com"]) {
+    assert.throws(() => app.apiDefinirLinkAnalise("AB-1", ruim), /link https do Google/, ruim);
+  }
+  const depois = app.apiDefinirLinkAnalise("AB-1", "  " + nb + " ");
+  assert.equal(depois.clientes.find((c: { id: string }) => c.id === "AB-1").linkAnalise, nb);
+  como("lider@empresa.com");
+  assert.equal(app.apiEstado().clientes.find((c: { id: string }) => c.id === "AB-1").linkAnalise, nb);
+  app.apiDefinirLinkAnalise("AB-1", ""); // liderança do segmento pode apagar
+  assert.equal(app.apiEstado().clientes.find((c: { id: string }) => c.id === "AB-1").linkAnalise, "");
+  // link colado direto na planilha que não é do Google não chega na tela
+  const cab = fakes.values("Clientes")[0];
+  const j = cab.indexOf("link_analise");
+  fakes.sheets.Clientes.rows[1][j] = "javascript:alert(1)";
+  assert.equal(app.apiEstado().clientes.find((c: { id: string }) => c.id === "AB-1").linkAnalise, "");
+});
+
+test("planilha antiga (sem link_analise) ou colada em outra ordem: grava na coluna certa", () => {
+  const { app, como, fakes } = cenario();
+  // Simula a planilha de antes desta versão, com colunas em outra ordem.
+  const antiga = ["nome", "id_externo", "etapa", "segmento", "responsavel_email", "desde"];
+  const atual = fakes.values("Clientes");
+  const idx = antiga.map((c) => atual[0].indexOf(c));
+  fakes.sheets.Clientes.rows = atual.map((r: string[], i: number) => (i === 0 ? antiga.slice() : idx.map((k) => r[k])));
+  como("onb7@empresa.com");
+  app.apiMudarEtapa("AB-1", "Accomplished");
+  app.apiDefinirLinkAnalise("AB-1", "https://docs.google.com/document/d/xyz");
+  const v = fakes.values("Clientes");
+  assert.deepEqual(v[0], [...antiga, "link_analise"]);
+  const lumen = v.find((r: string[]) => r[1] === "AB-1");
+  assert.equal(lumen[0], "Lumen Saúde");
+  assert.equal(lumen[2], "Accomplished");
+  assert.equal(lumen[6], "https://docs.google.com/document/d/xyz");
+  como(DONA);
+  app.apiAdicionarCliente({ idExterno: "AB-9", nome: "Nova", segmento: "7D", responsavelEmail: "onb7@empresa.com", etapa: "Welcome", desde: "2026-10-01" });
+  const nova = fakes.values("Clientes").find((r: string[]) => r[1] === "AB-9");
+  assert.deepEqual(nova.slice(0, 5), ["Nova", "AB-9", "Welcome", "7D", "onb7@empresa.com"]);
+});

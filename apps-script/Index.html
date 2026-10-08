@@ -21,6 +21,8 @@
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--text); font-family: "Archivo", system-ui, sans-serif; font-size: 15px; line-height: 1.55; }
 button, input, select, textarea { font: inherit; }
+a { color: var(--text); font-weight: 600; text-underline-offset: 3px; }
+a:hover { color: var(--action); }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
@@ -127,6 +129,10 @@ legend { margin-bottom: 6px; padding: 0; }
 table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
 th { padding: 10px 12px 10px 0; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; text-align: left; }
 td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+.btn-sm { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.cell-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.inline-form { display: flex; flex-wrap: wrap; gap: 8px; min-width: 260px; }
+.inline-form .input { flex: 1 1 220px; min-height: 36px; }
 .status { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 </style>
 </head>
@@ -445,7 +451,8 @@ function itemFila(o, i, cliente) {
       ])
     ]),
     el('div', { class: 'side' }, cliente
-      ? [el('strong', { text: cliente.nome }), el('span', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') + ' na etapa' }), concluir]
+      ? [el('strong', { text: cliente.nome }), el('span', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') + ' na etapa' }),
+        cliente.linkAnalise ? linkAnalise(cliente) : null, concluir]
       : [el('span', { text: o.segmento ? 'Segmento ' + o.segmento : 'Todos os times' }), concluir])
   ]);
 }
@@ -485,7 +492,7 @@ function paginaClientes() {
       el('h2', { class: 'h2', text: plural(lista.length, 'cliente', 'clientes') }),
       lista.length === 0 ? el('p', { class: 'empty', text: lider ? 'Nenhum cliente ainda. Adicione o primeiro acima.' : 'Nenhum cliente seu cadastrado ainda.' }) : el('div', { class: 'table-wrap' }, [
         el('table', {}, [
-          el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa'].map(function (h) { return el('th', { text: h }); }))]),
+          el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa', 'Análise'].map(function (h) { return el('th', { text: h }); }))]),
           el('tbody', {}, lista.map(function (c) {
             var d = dias(c.desde);
             var etapa = c.podeEditar
@@ -498,13 +505,44 @@ function paginaClientes() {
               el('td', { text: c.segmento }),
               el('td', { text: nome(c.responsavelEmail) }),
               el('td', {}, [etapa]),
-              el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') })
+              el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') }),
+              el('td', {}, [celulaAnalise(c)])
             ]);
           }))
         ])
       ])
     ])
   ]);
+}
+
+function linkAnalise(c) {
+  return el('a', { href: c.linkAnalise, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Abrir análise de ' + c.nome, text: 'Abrir análise ↗' });
+}
+
+/** Link da análise (notebook do NotebookLM, Doc…): abrir, adicionar ou trocar. */
+function celulaAnalise(c) {
+  if (UI.linkEditando === c.id) {
+    var valor = c.linkAnalise;
+    return el('form', { class: 'inline-form', onsubmit: function (e) {
+      e.preventDefault();
+      agir(chamar('apiDefinirLinkAnalise', c.id, valor), valor.trim() ? 'Link salvo.' : 'Link removido.').then(function (ok) {
+        if (ok) { UI.linkEditando = null; desenhar(); }
+      });
+    } }, [
+      el('input', { type: 'url', class: 'input', 'aria-label': 'Link da análise de ' + c.nome, placeholder: 'https://notebooklm.google.com/…', maxlength: '500', value: valor, oninput: function (e) { valor = e.target.value; } }),
+      el('button', { class: 'btn btn-primary btn-sm', type: 'submit', text: 'Salvar' }),
+      el('button', { class: 'btn btn-secondary btn-sm', type: 'button', text: 'Cancelar', onclick: function () { UI.linkEditando = null; desenhar(); } })
+    ]);
+  }
+  var editar = c.podeEditar ? el('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'aria-label': (c.linkAnalise ? 'Trocar link da análise de ' : 'Adicionar link da análise de ') + c.nome,
+    text: c.linkAnalise ? 'Trocar' : '+ Link', onclick: function () {
+      UI.linkEditando = c.id;
+      desenhar();
+      var campo = document.querySelector('.inline-form input');
+      if (campo) campo.focus();
+    } }) : null;
+  if (!c.linkAnalise && !editar) return el('span', { class: 'muted', text: '—' });
+  return el('div', { class: 'cell-actions' }, [c.linkAnalise ? linkAnalise(c) : null, editar]);
 }
 
 function formCliente() {

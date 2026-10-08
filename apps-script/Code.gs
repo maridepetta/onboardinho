@@ -303,3 +303,18 @@ function apiMudarEtapa(idCliente, etapaNova) {
     return apiEstado();
   });
 }
+
+/** Guarda (ou apaga, com link vazio) o link da análise do cliente: notebook do NotebookLM, Doc etc. */
+function apiDefinirLinkAnalise(idCliente, link) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    var valor = lerLinkAnalise_(link);
+    if (valor === null) throw new Error('Use um link https do Google (NotebookLM, Docs, Drive ou Gemini).');
+    var cliente = lerClientes_(usuarios).clientes.filter(function (c) { return c.id === String(idCliente); })[0];
+    if (!cliente) throw new Error('Cliente não encontrado.');
+    if (!podeEditarCliente_(eu, cliente)) throw new Error('Você não pode mudar este cliente.');
+    atualizar_('Clientes', cliente.linha, { link_analise: valor });
+    return apiEstado();
+  });
+}

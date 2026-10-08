@@ -10,8 +10,13 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
   pessoa só o que ela pode ver (o segmento dela). Quem tiver a planilha vê tudo.
 - **Clientes:** adicione pelo app (tela **Clientes → Adicionar cliente**, com listas para não errar)
   ou cole a exportação na aba `Clientes` com as colunas
-  `id_externo | nome | segmento | responsavel_email | etapa | desde`. Linhas com problema
+  `id_externo | nome | segmento | responsavel_email | etapa | desde | link_analise`
+  (a ordem das colunas não importa; `link_analise` é opcional). Linhas com problema
   aparecem para o admin na tela Clientes. Use o id do Astrobox em `id_externo`.
+- **Análise do cliente:** na tela Clientes, coluna **Análise → + Link**, cole o link do
+  notebook do NotebookLM (ou Doc/Drive/Gemini) do cliente. Só aceita `https://…google.com`.
+  O link aparece também no Início, ao lado do cliente. **O link não dá acesso:** compartilhe
+  o notebook no NotebookLM com quem precisa abrir. O app guarda só o link, nunca a conversa.
 
 ## Instalação (uma vez, ~10 minutos)
 
@@ -49,7 +54,7 @@ Sem isso, o link continua com a versão antiga.
 
 | Quem | Vê | Pode |
 | --- | --- | --- |
-| Onboarder (1 segmento) | os próprios clientes, avisos do seu segmento e gerais | concluir orientações dos seus clientes, pedir ajuste |
+| Onboarder (1 segmento) | os próprios clientes, avisos do seu segmento e gerais | concluir orientações dos seus clientes, mudar etapa e link da análise deles, pedir ajuste |
 | Liderança (1+ segmentos) | clientes dos seus segmentos | criar orientações de segmento/cliente nos seus segmentos, decidir pedidos de segmentação dentro deles |
 | Admin | tudo | cadastrar usuários, orientações gerais, decidir qualquer pedido |
 

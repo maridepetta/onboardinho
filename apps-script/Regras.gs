@@ -77,7 +77,19 @@ function podeCadastrarCliente_(u, segmento) {
   return u.papel === 'lideranca' && u.segmentos.indexOf(segmento) >= 0;
 }
 
-/** Mudar etapa: o responsável pelo cliente, a liderança do segmento ou admin. */
+/**
+ * Link da análise do cliente (NotebookLM, Docs, Drive, Gemini). Só https em domínio do
+ * Google: o link vira um <a> na tela, e um "javascript:" ou um site qualquer ali seria
+ * porta para golpe. '' = sem link; null = link recusado.
+ */
+function lerLinkAnalise_(valor) {
+  var v = String(valor == null ? '' : valor).trim();
+  if (!v) return '';
+  if (v.length > 500) return null;
+  return /^https:\/\/([a-z0-9-]+\.)*google\.com(\/[^\s]*)?$/i.test(v) ? v : null;
+}
+
+/** Mudar etapa e link da análise: o responsável pelo cliente, a liderança do segmento ou admin. */
 function podeEditarCliente_(u, cliente) {
   if (!u || !cliente) return false;
   if (normalizarTexto_(cliente.responsavelEmail) === normalizarTexto_(u.email)) return true;
