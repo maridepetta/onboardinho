@@ -118,7 +118,8 @@ test("planilha de clientes: linha ruim não entra e aparece só para o admin", (
   const admin = app.apiEstado();
   assert.equal(admin.clientes.length, 3);
   assert.equal(admin.problemasClientes.length, 1);
-  assert.match(admin.problemasClientes[0], /^Linha 5: .*segmento "9D".*Usuarios.*etapa "Fase X".*data "31\/02\/2026"/);
+  assert.match(admin.problemasClientes[0], /^Linha 5: .*segmento "9D".*etapa "Fase X".*data "31\/02\/2026"/);
+  assert.deepEqual(admin.avisosClientes, []); // linha com erro não gera aviso repetido
   como("lider@empresa.com");
   assert.deepEqual(app.apiEstado().problemasClientes, []);
 });
@@ -298,4 +299,86 @@ test("planilha antiga (sem link_analise) ou colada em outra ordem: grava na colu
   app.apiAdicionarCliente({ idExterno: "AB-9", nome: "Nova", segmento: "7D", responsavelEmail: "onb7@empresa.com", etapa: "Welcome", desde: "2026-10-01" });
   const nova = fakes.values("Clientes").find((r: string[]) => r[1] === "AB-9");
   assert.deepEqual(nova.slice(0, 5), ["Nova", "AB-9", "Welcome", "7D", "onb7@empresa.com"]);
+});
+
+test("importar colando da planilha: reconhece colunas, níveis, etapas; prévia não grava", () => {
+  const { app, fakes } = cenario();
+  const colado = [
+    ["Código Astrobox", "Nome do cliente", "Nível", "E-mail do responsável", "Fase", "Data da etapa", "Observação"],
+    ["AB-10", "Nova Era", "N4", "onb7@empresa.com", "Pré-onboarding", "01/10/2026", "x"],
+    ["AB-11", "Sem Dono", "N2", "", "activation and monitoring", "", ""],
+    ["AB-12", "Fantasma", "N5", "fantasma@empresa.com", "Welcome", "2026-09-30", ""],
+    ["AB-13", "Por Nome", "", "Rafael Lima", "Kickoff", "01/10/2026", ""],
+    ["AB-1", "Lumen Saúde", "7D", "onb7@empresa.com", "Welcome", "01/10/2026", ""],
+    ["AB-10", "Nova Era de novo", "N4", "", "Welcome", "01/10/2026", ""],
+    ["AB-14", "=HYPERLINK(\"x\")", "N9?", "", "Welcome", "01/10/2099", ""],
+  ].map((l) => l.join("\t")).join("\n");
+  const antes = fakes.values("Clientes").length;
+  const p = app.apiPreverImportacao(colado, {});
+  assert.equal(fakes.values("Clientes").length, antes, "prévia não grava");
+  const campos = Object.fromEntries(p.colunas.map((c: { cabecalho: string; campo: string }) => [c.cabecalho, c.campo]));
+  assert.deepEqual(campos, {
+    "Código Astrobox": "Código Astrobox", "Nome do cliente": "Nome", "Nível": "Segmento",
+    "E-mail do responsável": "Responsável", "Fase": "Etapa", "Data da etapa": "Na etapa desde", "Observação": "",
+  });
+  const por = Object.fromEntries(p.linhas.map((l: { idExterno: string; nome: string }) => [l.nome, l]));
+  assert.equal(por["Nova Era"].situacao, "ok");
+  assert.equal(por["Nova Era"].segmento, "7D");
+  assert.equal(por["Nova Era"].etapa, "Pre Onboarding");
+  assert.equal(por["Sem Dono"].situacao, "aviso");
+  assert.equal(por["Sem Dono"].segmento, "6D");
+  assert.equal(por["Sem Dono"].etapa, "Activation & Monitoring");
+  assert.equal(por["Fantasma"].situacao, "aviso");
+  assert.equal(por["Por Nome"].segmento, "8D"); // segmento veio do responsável achado pelo nome
+  assert.equal(por["Por Nome"].situacao, "erro"); // etapa Kickoff não existe
+  assert.deepEqual(p.desconhecidos.etapa, ["Kickoff"]);
+  assert.equal(por["Lumen Saúde"].situacao, "repetido");
+  assert.equal(por["Nova Era de novo"].situacao, "repetido");
+  assert.match(por['=HYPERLINK("x")'].motivo, /segmento "N9\?".*futuro/);
+  assert.deepEqual(p.contagem, { ok: 1, aviso: 2, repetido: 2, erro: 2 });
+
+  // Mapeando a etapa desconhecida, a linha entra.
+  const opcoes = { mapas: { etapa: { Kickoff: "Welcome" } } };
+  assert.equal(app.apiPreverImportacao(colado, opcoes).contagem.ok, 2);
+  const depois = app.apiImportarClientes(colado, opcoes);
+  assert.deepEqual(depois.importacao, { importados: 4, deFora: 3 });
+  const ids = depois.clientes.map((c: { id: string }) => c.id);
+  for (const id of ["AB-10", "AB-11", "AB-12", "AB-13"]) assert.ok(ids.includes(id), id);
+  const semDono = depois.clientes.find((c: { id: string }) => c.id === "AB-11");
+  assert.equal(semDono.responsavelEmail, "");
+  assert.equal(semDono.semDono, true);
+  assert.ok(depois.avisosClientes.some((a: string) => a.includes("fantasma@empresa.com")));
+  // importar de novo não duplica
+  assert.throws(() => app.apiImportarClientes(colado, opcoes), /Nenhuma linha pronta/);
+  assert.ok(!JSON.stringify(fakes.sheets).includes("#FORMULA"));
+});
+
+test("importar: liderança só nos seus segmentos; onboarder não importa; sem coluna de nome explica", () => {
+  const { app, como } = cenario();
+  const colado = "Cliente\tSegmento\nA\t7D\nB\t8D";
+  como("lider@empresa.com"); // 6D e 7D
+  const p = app.apiPreverImportacao(colado, {});
+  assert.deepEqual(p.linhas.map((l: { situacao: string }) => l.situacao), ["aviso", "erro"]);
+  assert.match(p.linhas[1].motivo, /8D não é um segmento seu/);
+  assert.throws(() => app.apiPreverImportacao("Fulano\tCiclano\na\tb", {}), /coluna com o nome do cliente/);
+  // CSV com ponto e vírgula e aspas
+  const csv = 'Empresa;Segmento;Etapa\n"Silva; Filhos";6D;Welcome';
+  assert.equal(app.apiPreverImportacao(csv, {}).linhas[0].nome, "Silva; Filhos");
+  como("onb7@empresa.com");
+  assert.throws(() => app.apiPreverImportacao(colado, {}), /não pode importar/);
+});
+
+test("responsável: liderança do segmento escolhe ou tira; precisa ser onboarder do segmento", () => {
+  const { app, como } = cenario();
+  como("lider@empresa.com");
+  assert.throws(() => app.apiMudarResponsavel("AB-1", "onb8@empresa.com"), /onboarder do segmento 7D/);
+  let e = app.apiMudarResponsavel("AB-1", "");
+  assert.equal(e.clientes.find((c: { id: string }) => c.id === "AB-1").semDono, true);
+  e = app.apiMudarResponsavel("AB-1", "onb7@empresa.com");
+  assert.equal(e.clientes.find((c: { id: string }) => c.id === "AB-1").semDono, false);
+  assert.throws(() => app.apiMudarResponsavel("AB-3", ""), /não encontrado|Só a liderança/);
+  como("onb7@empresa.com");
+  assert.throws(() => app.apiMudarResponsavel("AB-1", ""), /Só a liderança/);
+  como(DONA);
+  app.apiAdicionarCliente({ nome: "Sem ninguém", segmento: "8D", responsavelEmail: "", etapa: "Welcome", desde: "2026-10-01" });
 });

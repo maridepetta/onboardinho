@@ -111,6 +111,17 @@ function inserir_(nome, obj) {
   }));
 }
 
+/** Várias linhas de uma vez (importação): uma escrita só, em vez de uma por linha. */
+function inserirVarios_(nome, objs) {
+  if (!objs.length) return;
+  var sh = aba_(nome);
+  var cab = cabecalho_(sh, nome);
+  var linhas = objs.map(function (obj) {
+    return cab.map(function (c) { return ABAS[nome].indexOf(c) >= 0 && obj[c] != null ? celulaSegura_(obj[c]) : ''; });
+  });
+  sh.getRange(sh.getLastRow() + 1, 1, linhas.length, cab.length).setValues(linhas);
+}
+
 /** Atualiza só as colunas informadas da linha `linha`. */
 function atualizar_(nome, linha, mudancas) {
   var sh = aba_(nome);
@@ -157,11 +168,13 @@ function lerUsuarios_() {
 }
 
 /**
- * Clientes da aba "Clientes" (colada da exportação).
- * - `problemas`: linhas que não dá para usar (sem nome, segmento/etapa/data inválidos,
- *   responsável desconhecido). Não entram na tela.
- * - `avisos`: linhas usáveis mas que precisam de atenção, como responsável que mudou de
- *   segmento. O cliente continua visível para não sumir de ninguém; o admin reatribui.
+ * Clientes da aba "Clientes" (colada da exportação ou importada pelo app).
+ * - `problemas`: linhas que não dá para usar (sem nome, segmento/etapa/data inválidos).
+ *   Não entram na tela.
+ * - `avisos`: linhas usáveis mas que precisam de atenção (responsável que não está em
+ *   Usuarios ou mudou de segmento). O cliente aparece para a liderança e o admin, que
+ *   escolhem o responsável na tela Clientes.
+ * - Cliente sem responsável é normal (acabou de chegar): vem com `semDono`, sem aviso.
  */
 function lerClientes_(usuarios) {
   var porEmail = {};
@@ -173,22 +186,26 @@ function lerClientes_(usuarios) {
   linhas.forEach(function (r) {
     var erros = [];
     var nome = String(r.nome || '').trim();
-    var segmento = lerSegmentos_(r.segmento)[0];
+    var segmento = lerSegmentoCliente_(r.segmento);
     var email = String(r.responsavel_email || '').trim().toLowerCase();
     var dono = porEmail[email];
     var etapa = lerEtapa_(r.etapa);
     var desde = lerData_(r.desde);
     if (!nome) erros.push('nome vazio');
     if (!segmento) erros.push('segmento "' + r.segmento + '" inválido');
-    if (!dono) erros.push('responsável "' + email + '" não está na aba Usuarios');
-    else if (segmento && (dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0)) {
-      avisos.push('Linha ' + r._linha + ': ' + nome + ' é ' + segmento + ', mas ' + (dono.nome || email) +
+    var aviso = '';
+    if (email && !dono) {
+      aviso = ('Linha ' + r._linha + ': ' + nome + ': o responsável ' + email + ' não está em Usuários. ' +
+        'Cadastre a pessoa ou escolha outro responsável.');
+    } else if (dono && segmento && (dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0)) {
+      aviso = ('Linha ' + r._linha + ': ' + nome + ' é ' + segmento + ', mas ' + (dono.nome || email) +
         (dono.papel !== 'onboarder' ? ' não é onboarder' : ' agora é ' + dono.segmentos.join(' + ')) +
         '. Reatribua o responsável.');
     }
     if (!etapa) erros.push('etapa "' + r.etapa + '" não existe');
     if (!desde) erros.push('data "' + r.desde + '" inválida');
     if (erros.length) { problemas.push('Linha ' + r._linha + ': ' + erros.join('; ') + '.'); return; }
+    if (aviso) avisos.push(aviso);
     var idExterno = String(r.id_externo || '').trim();
     clientes.push({
       linha: r._linha,
@@ -199,7 +216,8 @@ function lerClientes_(usuarios) {
       responsavelEmail: email,
       etapa: etapa,
       desde: desde,
-      linkAnalise: lerLinkAnalise_(r.link_analise) || ''
+      linkAnalise: lerLinkAnalise_(r.link_analise) || '',
+      semDono: !dono || dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0
     });
   });
   return { clientes: clientes, problemas: problemas, avisos: avisos, totalLinhas: linhas.length };

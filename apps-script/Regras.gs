@@ -32,10 +32,29 @@ function lerSegmentos_(valor) {
   return ORDEM_SEGMENTOS.filter(function (s) { return pedidos.indexOf(s) >= 0; });
 }
 
+/** Texto só com letras e números, sem acento: "Nome do Cliente" → "nomedocliente". */
+function chave_(valor) {
+  return normalizarTexto_(valor).replace(/[^a-z0-9]/g, '');
+}
+
+/** Etapa tolerante: ignora maiúsculas, acentos, hífen e "&"/"and"/"e" ("Pré-onboarding", "activation and monitoring"). */
 function lerEtapa_(valor) {
-  var alvo = normalizarTexto_(valor);
-  for (var i = 0; i < ETAPAS.length; i++) if (normalizarTexto_(ETAPAS[i]) === alvo) return ETAPAS[i];
+  function k(v) { return chave_(normalizarTexto_(v).replace(/&/g, ' ').replace(/\b(and|e)\b/g, ' ')); }
+  var alvo = k(valor);
+  if (!alvo) return null;
+  for (var i = 0; i < ETAPAS.length; i++) if (k(ETAPAS[i]) === alvo) return ETAPAS[i];
   return null;
+}
+
+/** Segmento de um cliente: "7D" ou o nível do cliente ("N4", "Nível 5", "N6+"). null se não der para saber. */
+function lerSegmentoCliente_(valor) {
+  var lista = lerSegmentos_(valor);
+  if (lista.length === 1) return lista[0];
+  if (lista.length > 1) return null;
+  var m = normalizarTexto_(valor).match(/^(?:n|nivel)\s*(\d+)\s*\+?$/);
+  if (!m) return null;
+  var n = +m[1];
+  return n >= 6 ? '8D' : n >= 4 ? '7D' : n >= 2 ? '6D' : null;
 }
 
 /** Data de célula (Date) ou texto dd/mm/aaaa | aaaa-mm-dd → ISO. null se inválida. */

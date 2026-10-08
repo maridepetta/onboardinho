@@ -8,11 +8,14 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
 - **Banco:** uma planilha com 4 abas (`Usuarios`, `Clientes`, `Orientacoes`, `Pedidos`).
   **Não compartilhe a planilha com o time**: o app roda com a sua permissão e mostra a cada
   pessoa só o que ela pode ver (o segmento dela). Quem tiver a planilha vê tudo.
-- **Clientes:** adicione pelo app (tela **Clientes → Adicionar cliente**, com listas para não errar)
-  ou cole a exportação na aba `Clientes` com as colunas
-  `id_externo | nome | segmento | responsavel_email | etapa | desde | link_analise`
-  (a ordem das colunas não importa; `link_analise` é opcional). Linhas com problema
-  aparecem para o admin na tela Clientes. Use o id do Astrobox em `id_externo`.
+- **Clientes:** na tela **Clientes → Colar da planilha**, copie as linhas da sua planilha ou da
+  exportação (com o cabeçalho) e cole. O app reconhece as colunas pelo nome ("Cliente", "Empresa",
+  "Nível", "Fase", "Onboarder"…), aceita nível N2–N6 no lugar do segmento, mostra uma prévia e só
+  grava quando você clica em **Importar**. Valores que ele não conhece (ex.: uma etapa "Kickoff")
+  você traduz na própria prévia. Cliente repetido (mesmo código, ou mesmo nome e segmento) fica de fora.
+  Cliente pode entrar **sem responsável**: a liderança ou o admin escolhe depois, na tabela.
+  Também dá para adicionar um por um (**Um cliente**) ou colar direto na aba `Clientes` com as colunas
+  `id_externo | nome | segmento | responsavel_email | etapa | desde | link_analise`.
 - **Análise do cliente:** na tela Clientes, coluna **Análise → + Link**, cole o link do
   notebook do NotebookLM (ou Doc/Drive/Gemini) do cliente. Só aceita `https://…google.com`.
   O link aparece também no Início, ao lado do cliente. **O link não dá acesso:** compartilhe
@@ -41,6 +44,11 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
 Depois de mudar o código: **Implantar → Gerenciar implantações → editar (lápis) → Versão: Nova versão**.
 Sem isso, o link continua com a versão antiga.
 
+**Testar antes de liberar para o time:** **Implantar → Testar implantações** dá um link que termina
+em `/dev`. Ele roda o código salvo mais recente e só abre para quem edita o script; o link `/exec`
+do time continua na versão antiga. Atenção: o `/dev` usa **a mesma planilha**. O que você importar
+no teste aparece para o time. A prévia não grava nada.
+
 ## Uso
 
 - Cadastre as pessoas em **Usuários** (dentro do app). Elas entram pelo link com a conta Google.
@@ -58,7 +66,7 @@ Sem isso, o link continua com a versão antiga.
 | Quem | Vê | Pode |
 | --- | --- | --- |
 | Onboarder (1 segmento) | os próprios clientes, avisos do seu segmento e gerais | concluir orientações dos seus clientes, mudar etapa e link da análise deles, pedir ajuste |
-| Liderança (1+ segmentos) | clientes dos seus segmentos | criar orientações de segmento/cliente nos seus segmentos, decidir pedidos de segmentação dentro deles |
+| Liderança (1+ segmentos) | clientes dos seus segmentos | importar/adicionar clientes e escolher o responsável nos seus segmentos, criar orientações de segmento/cliente nos seus segmentos, decidir pedidos de segmentação dentro deles |
 | Admin | tudo | cadastrar usuários, orientações gerais, decidir qualquer pedido |
 
 Ninguém decide o próprio pedido. Mudança de papel: só admin.

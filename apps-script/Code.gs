@@ -81,8 +81,10 @@ function apiEstado() {
     eu: semLinha_(eu),
     nomes: nomes,
     clientes: clientes.map(function (c) {
-      return Object.assign(semLinha_(c), { podeEditar: podeEditarCliente_(eu, c) });
+      return Object.assign(semLinha_(c), { podeEditar: podeEditarCliente_(eu, c), podeAtribuir: podeCadastrarCliente_(eu, c.segmento) });
     }),
+    // Segmentos em que a pessoa pode cadastrar/importar clientes.
+    segmentosCadastro: ORDEM_SEGMENTOS.filter(function (sg) { return podeCadastrarCliente_(eu, sg); }),
     // Onboarders que podem ser responsáveis no formulário "Adicionar cliente".
     responsaveis: usuarios.filter(function (u) {
       return u.papel === 'onboarder' && u.segmentos.length === 1 && podeCadastrarCliente_(eu, u.segmentos[0]);
@@ -253,7 +255,7 @@ function apiConcluirOrientacao(id) {
 
 // ---------- Clientes ----------
 
-/** dados: { idExterno?, nome, segmento, responsavelEmail, etapa, desde (aaaa-mm-dd ou dd/mm/aaaa) } */
+/** dados: { idExterno?, nome, segmento, responsavelEmail? (vazio = sem responsável), etapa, desde (aaaa-mm-dd ou dd/mm/aaaa) } */
 function apiAdicionarCliente(dados) {
   return comTrava_(function () {
     var usuarios = lerUsuarios_();
@@ -268,9 +270,8 @@ function apiAdicionarCliente(dados) {
     if (!nome) throw new Error('Informe o nome do cliente.');
     if (!segmento) throw new Error('Escolha o segmento.');
     if (!podeCadastrarCliente_(eu, segmento)) throw new Error('Você não pode cadastrar clientes em ' + segmento + '.');
-    var dono = usuarios.filter(function (u) { return u.email === email; })[0];
-    if (!dono || dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0) {
-      throw new Error('Escolha um onboarder do segmento ' + segmento + ' como responsável.');
+    if (email && !ehOnboarderDe_(usuarios, email, segmento)) {
+      throw new Error('Escolha um onboarder do segmento ' + segmento + ' como responsável (ou deixe sem responsável).');
     }
     if (!etapa) throw new Error('Escolha a etapa.');
     if (!desde) throw new Error('Data inválida.');
@@ -284,6 +285,27 @@ function apiAdicionarCliente(dados) {
       id_externo: idExterno, nome: nome, segmento: segmento, responsavel_email: email,
       etapa: etapa, desde: desde.slice(0, 10)
     });
+    return apiEstado();
+  });
+}
+
+function ehOnboarderDe_(usuarios, email, segmento) {
+  return usuarios.some(function (u) { return u.email === email && u.papel === 'onboarder' && u.segmentos.indexOf(segmento) >= 0; });
+}
+
+/** Troca (ou tira, com email vazio) o responsável. Só liderança do segmento ou admin. */
+function apiMudarResponsavel(idCliente, emailNovo) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    var cliente = lerClientes_(usuarios).clientes.filter(function (c) { return c.id === String(idCliente); })[0];
+    if (!cliente) throw new Error('Cliente não encontrado.');
+    if (!podeCadastrarCliente_(eu, cliente.segmento)) throw new Error('Só a liderança do segmento ou o admin escolhem o responsável.');
+    var email = String(emailNovo || '').trim().toLowerCase();
+    if (email && !ehOnboarderDe_(usuarios, email, cliente.segmento)) {
+      throw new Error('O responsável precisa ser onboarder do segmento ' + cliente.segmento + '.');
+    }
+    atualizar_('Clientes', cliente.linha, { responsavel_email: email });
     return apiEstado();
   });
 }
@@ -316,5 +338,221 @@ function apiDefinirLinkAnalise(idCliente, link) {
     if (!podeEditarCliente_(eu, cliente)) throw new Error('Você não pode mudar este cliente.');
     atualizar_('Clientes', cliente.linha, { link_analise: valor });
     return apiEstado();
+  });
+}
+
+// ---------- Importar clientes (colar da planilha) ----------
+
+var MAX_LINHAS_IMPORTACAO = 2000;
+
+/**
+ * Quais colunas viram o quê. Primeiro tenta o nome exato; depois "contém" (ex.: "E-mail do
+ * responsável" contém "responsavel"). A ordem importa: "Data da etapa" é data, não etapa.
+ */
+var COLUNAS_IMPORTACAO = [
+  ['responsavel', ['responsavel', 'responsavelemail', 'emailresponsavel', 'emaildoresponsavel', 'onboarder', 'owner', 'csm', 'analista', 'email', 'dono'], ['responsavel', 'onboarder']],
+  ['idExterno', ['idexterno', 'id', 'codigo', 'cod', 'astrobox', 'idastrobox', 'codigoastrobox', 'idcliente', 'iddocliente', 'codigocliente', 'codigodocliente'], ['astrobox', 'codigo']],
+  ['segmento', ['segmento', 'seg', 'segmentacao', 'nivel', 'tier', 'faixa'], ['segment', 'nivel']],
+  ['desde', ['desde', 'data', 'datainicio', 'datadeinicio', 'inicio', 'dataetapa', 'dataentrada', 'entrada', 'desdequando'], ['data']],
+  ['etapa', ['etapa', 'fase', 'status', 'stage', 'etapaatual', 'faseatual'], ['etapa', 'fase']],
+  ['linkAnalise', ['link', 'linkanalise', 'linkdaanalise', 'analise', 'notebook'], ['link']],
+  ['nome', ['nome', 'cliente', 'nomecliente', 'nomedocliente', 'empresa', 'razaosocial', 'conta', 'account', 'nomefantasia', 'nomedaempresa'], ['cliente', 'empresa', 'nome']]
+];
+
+var ROTULOS_IMPORTACAO = {
+  nome: 'Nome', idExterno: 'Código Astrobox', segmento: 'Segmento', responsavel: 'Responsável',
+  etapa: 'Etapa', desde: 'Na etapa desde', linkAnalise: 'Link da análise'
+};
+
+/** Texto colado (do Sheets/Excel: separado por tab; CSV: vírgula ou ponto e vírgula) → linhas. */
+function lerTextoColado_(texto) {
+  var t = String(texto || '').replace(/\r\n?/g, '\n');
+  var primeira = t.split('\n')[0];
+  var sep = primeira.indexOf('\t') >= 0 ? '\t' : (primeira.split(';').length > primeira.split(',').length ? ';' : ',');
+  var linhas = [];
+  var linha = [];
+  var cel = '';
+  var aspas = false;
+  for (var i = 0; i < t.length; i++) {
+    var ch = t.charAt(i);
+    if (aspas) {
+      if (ch === '"' && t.charAt(i + 1) === '"') { cel += '"'; i++; }
+      else if (ch === '"') aspas = false;
+      else cel += ch;
+    } else if (ch === '"' && cel === '') aspas = true;
+    else if (ch === sep) { linha.push(cel); cel = ''; }
+    else if (ch === '\n') { linha.push(cel); linhas.push(linha); linha = []; cel = ''; }
+    else cel += ch;
+  }
+  if (cel !== '' || linha.length) { linha.push(cel); linhas.push(linha); }
+  return linhas
+    .map(function (l) { return l.map(function (c) { return c.trim(); }); })
+    .filter(function (l) { return l.some(function (c) { return c !== ''; }); });
+}
+
+/** Cabeçalho → { campo: índice da coluna }. */
+function mapearColunas_(cabecalho) {
+  var mapa = {};
+  var usadas = {};
+  var chaves = cabecalho.map(chave_);
+  [1, 2].forEach(function (passo) {
+    COLUNAS_IMPORTACAO.forEach(function (def) {
+      if (mapa[def[0]] !== undefined) return;
+      for (var j = 0; j < chaves.length; j++) {
+        if (usadas[j] || !chaves[j]) continue;
+        var bate = passo === 1
+          ? def[1].indexOf(chaves[j]) >= 0
+          : def[2].some(function (pedaco) { return chaves[j].indexOf(pedaco) >= 0; });
+        if (bate) { mapa[def[0]] = j; usadas[j] = true; return; }
+      }
+    });
+  });
+  return mapa;
+}
+
+/**
+ * Analisa o texto colado sem gravar nada. Cada linha sai com situação:
+ * ok | aviso (entra, mas olhe) | repetido (já existe, fica de fora) | erro (fica de fora).
+ * opcoes: { etapaPadrao, segmentoPadrao, mapas: { etapa: {texto: etapa}, segmento: {texto: seg} } }
+ */
+function analisarImportacao_(eu, usuarios, existentes, texto, opcoes) {
+  opcoes = opcoes || {};
+  var mapas = opcoes.mapas || {};
+  var mapaEtapa = mapas.etapa || {};
+  var mapaSeg = mapas.segmento || {};
+  var linhas = lerTextoColado_(texto);
+  if (linhas.length < 2) throw new Error('Cole o cabeçalho e pelo menos uma linha de cliente.');
+  if (linhas.length - 1 > MAX_LINHAS_IMPORTACAO) throw new Error('Cole no máximo ' + MAX_LINHAS_IMPORTACAO + ' clientes por vez.');
+  var cab = linhas[0];
+  var col = mapearColunas_(cab);
+  if (col.nome === undefined) {
+    throw new Error('Não achei a coluna com o nome do cliente. A primeira linha colada precisa ser o cabeçalho ' +
+      '(ex.: "Cliente", "Nome" ou "Empresa").');
+  }
+  var etapaPadrao = lerEtapa_(opcoes.etapaPadrao) || ETAPAS[0];
+  var segPadrao = lerSegmentos_([opcoes.segmentoPadrao || ''])[0] || '';
+  var hoje = hoje_();
+  var porEmail = {};
+  var porNome = {};
+  usuarios.forEach(function (u) {
+    porEmail[u.email] = u;
+    var k = chave_(u.nome);
+    if (k) porNome[k] = porNome[k] === undefined ? u : null; // null = nome repetido, não dá para saber quem é
+  });
+  var vistos = {};
+  existentes.forEach(function (c) {
+    vistos[c.idExterno ? 'id:' + c.idExterno : 'nome:' + chave_(c.nome) + '|' + c.segmento] = 'cadastro';
+  });
+  var desconhecidos = { etapa: {}, segmento: {} };
+
+  function valor(l, campo) { return col[campo] === undefined ? '' : String(l[col[campo]] || '').trim(); }
+
+  var saida = linhas.slice(1).map(function (l, i) {
+    var erros = [];
+    var avisos = [];
+    var nome = valor(l, 'nome').slice(0, 140);
+    var idExterno = valor(l, 'idExterno').slice(0, 60);
+    if (!nome) erros.push('sem nome');
+
+    // Responsável: e-mail ou nome de alguém em Usuários.
+    var respTexto = valor(l, 'responsavel');
+    var dono = null;
+    var email = '';
+    if (respTexto) {
+      dono = respTexto.indexOf('@') >= 0 ? porEmail[respTexto.toLowerCase()] : porNome[chave_(respTexto)];
+      if (dono) email = dono.email;
+      else if (respTexto.indexOf('@') >= 0) {
+        email = respTexto.toLowerCase();
+        avisos.push(email + ' não está em Usuários: entra sem responsável até você cadastrar a pessoa');
+      } else avisos.push('"' + respTexto + '" não está em Usuários: entra sem responsável');
+    }
+
+    // Segmento: da coluna, senão do responsável, senão o padrão escolhido.
+    var segTexto = valor(l, 'segmento');
+    var segmento = null;
+    if (segTexto) {
+      segmento = lerSegmentoCliente_(segTexto) || lerSegmentos_([mapaSeg[segTexto] || ''])[0] || null;
+      if (!segmento) { desconhecidos.segmento[segTexto] = true; erros.push('segmento "' + segTexto + '" não reconhecido'); }
+    } else if (dono && dono.papel === 'onboarder' && dono.segmentos.length === 1) segmento = dono.segmentos[0];
+    else if (segPadrao) segmento = segPadrao;
+    else erros.push('sem segmento');
+    if (segmento && !podeCadastrarCliente_(eu, segmento)) erros.push(segmento + ' não é um segmento seu');
+    if (segmento && dono && (dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0)) {
+      avisos.push((dono.nome || dono.email) + ' não é onboarder ' + segmento + ': entra sem responsável');
+      email = '';
+    }
+    if (!respTexto) avisos.push('sem responsável: escolha depois na tabela');
+
+    // Etapa: da coluna (tolerante) ou a padrão.
+    var etapaTexto = valor(l, 'etapa');
+    var etapa = etapaTexto ? (lerEtapa_(etapaTexto) || lerEtapa_(mapaEtapa[etapaTexto])) : etapaPadrao;
+    if (!etapa) { desconhecidos.etapa[etapaTexto] = true; erros.push('etapa "' + etapaTexto + '" não existe'); }
+
+    // Data: da coluna ou hoje.
+    var desdeTexto = valor(l, 'desde');
+    var desde = desdeTexto ? lerData_(desdeTexto) : hoje + 'T12:00:00.000Z';
+    if (!desde) erros.push('data "' + desdeTexto + '" inválida');
+    else if (desde.slice(0, 10) > hoje) erros.push('data no futuro');
+
+    var linkTexto = valor(l, 'linkAnalise');
+    var link = lerLinkAnalise_(linkTexto);
+    if (link === null) { avisos.push('link ignorado (só links do Google)'); link = ''; }
+
+    var situacao = erros.length ? 'erro' : avisos.length ? 'aviso' : 'ok';
+    if (!erros.length) {
+      var chave = idExterno ? 'id:' + idExterno : 'nome:' + chave_(nome) + '|' + segmento;
+      if (vistos[chave]) {
+        situacao = 'repetido';
+        erros = [vistos[chave] === 'cadastro' ? 'já está cadastrado' : 'repetido na própria colagem'];
+        avisos = [];
+      } else vistos[chave] = 'colagem';
+    }
+    return {
+      linha: i + 2, situacao: situacao, motivo: erros.concat(avisos).join('; '),
+      nome: nome, idExterno: idExterno, segmento: segmento || segTexto, responsavelEmail: email,
+      responsavelTexto: respTexto, etapa: etapa || etapaTexto, desde: desde ? desde.slice(0, 10) : desdeTexto, linkAnalise: link || ''
+    };
+  });
+
+  var contagem = { ok: 0, aviso: 0, repetido: 0, erro: 0 };
+  saida.forEach(function (r) { contagem[r.situacao] += 1; });
+  return {
+    colunas: cab.map(function (h, j) {
+      var campo = Object.keys(col).filter(function (k) { return col[k] === j; })[0];
+      return { cabecalho: h, campo: campo ? ROTULOS_IMPORTACAO[campo] : '' };
+    }),
+    faltando: Object.keys(ROTULOS_IMPORTACAO).filter(function (k) { return col[k] === undefined; }).map(function (k) { return ROTULOS_IMPORTACAO[k]; }),
+    linhas: saida,
+    contagem: contagem,
+    desconhecidos: { etapa: Object.keys(desconhecidos.etapa), segmento: Object.keys(desconhecidos.segmento) }
+  };
+}
+
+/** Prévia: não grava nada. */
+function apiPreverImportacao(texto, opcoes) {
+  var usuarios = lerUsuarios_();
+  var eu = exigirUsuario_(usuarios);
+  if (!ORDEM_SEGMENTOS.some(function (sg) { return podeCadastrarCliente_(eu, sg); })) throw new Error('Você não pode importar clientes.');
+  return analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, texto, opcoes);
+}
+
+/** Grava as linhas ok e com aviso. Analisa de novo aqui: nunca confia na prévia que a tela mandou. */
+function apiImportarClientes(texto, opcoes) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    if (!ORDEM_SEGMENTOS.some(function (sg) { return podeCadastrarCliente_(eu, sg); })) throw new Error('Você não pode importar clientes.');
+    var r = analisarImportacao_(eu, usuarios, lerClientes_(usuarios).clientes, texto, opcoes);
+    var entram = r.linhas.filter(function (l) { return l.situacao === 'ok' || l.situacao === 'aviso'; });
+    if (!entram.length) throw new Error('Nenhuma linha pronta para importar. Veja os motivos na prévia.');
+    inserirVarios_('Clientes', entram.map(function (l) {
+      return {
+        id_externo: l.idExterno, nome: l.nome, segmento: l.segmento, responsavel_email: l.responsavelEmail,
+        etapa: l.etapa, desde: l.desde, link_analise: l.linkAnalise
+      };
+    }));
+    var estado = apiEstado();
+    estado.importacao = { importados: entram.length, deFora: r.linhas.length - entram.length };
+    return estado;
   });
 }

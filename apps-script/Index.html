@@ -175,6 +175,13 @@ td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); vertica
 .cell-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .inline-form { display: flex; flex-wrap: wrap; gap: 8px; min-width: 260px; }
 .inline-form .input { flex: 1 1 220px; min-height: 36px; }
+.imp-steps { margin: 0; padding-left: 20px; font-size: 14px; color: var(--n800); }
+.imp-texto { min-height: 160px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; overflow-x: auto; }
+.imp-previa { padding-top: 16px; border-top: 1px solid var(--divider); }
+.imp-sum { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; font-size: 15px; font-weight: 400; }
+.imp-sum strong { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.tag-ok { background: var(--n200); color: var(--text); }
+.input-alert { border-color: var(--a700); }
 .status { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 </style>
 </head>
@@ -612,12 +619,13 @@ function paginaClientes() {
   });
   var lider = podeLideranca();
   var foraDaTela = S.eu.admin ? S.totalLinhasClientes - S.clientes.length : 0;
+  var semDono = S.clientes.filter(function (c) { return c.semDono && c.podeAtribuir; }).length;
   return el('main', { class: 'page' }, [
     el('div', { class: 'stack' }, [
       el('p', { class: 'kicker', text: S.eu.admin ? 'Todos os segmentos' : 'Segmentos ' + S.eu.segmentos.join(' + ') }),
       el('h1', { class: 'title', text: lider ? 'Clientes' : 'Meus clientes' }),
       el('p', { class: 'lead', text: lider
-        ? 'Adicione clientes aqui ou cole a exportação na aba "Clientes" da planilha. Quando um cliente muda de etapa, troque na tabela: a contagem de dias recomeça.'
+        ? 'Cole os clientes da sua planilha logo abaixo ou adicione um por um. Na tabela, escolha o responsável e troque a etapa quando o cliente avançar: a contagem de dias recomeça.'
         : 'Quando um cliente seu muda de etapa, troque aqui. Assim as orientações e a contagem de dias ficam certas.' }),
       S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
     ]),
@@ -631,10 +639,11 @@ function paginaClientes() {
       el('strong', { text: plural(S.problemasClientes.length, 'linha da aba Clientes não entrou', 'linhas da aba Clientes não entraram') + ':' }),
       el('ul', {}, S.problemasClientes.slice(0, 30).map(function (p) { return el('li', { text: p }); }))
     ]) : null,
-    lider ? formCliente() : null,
+    semDono ? el('p', { class: 'notice', text: plural(semDono, 'cliente está', 'clientes estão') + ' sem responsável. Escolha na coluna Responsável da tabela.' }) : null,
+    S.segmentosCadastro.length ? entradaClientes() : null,
     el('section', { class: 'stack' }, [
       el('h2', { class: 'h2', text: plural(lista.length, 'cliente', 'clientes') }),
-      lista.length === 0 ? el('p', { class: 'empty', text: lider ? 'Nenhum cliente ainda. Adicione o primeiro acima.' : 'Nenhum cliente seu cadastrado ainda.' }) : el('div', { class: 'table-wrap' }, [
+      lista.length === 0 ? el('p', { class: 'empty', text: lider ? 'Nenhum cliente ainda. Cole a sua planilha acima.' : 'Nenhum cliente seu cadastrado ainda. Peça para a liderança colocar e escolher você como responsável.' }) : el('div', { class: 'table-wrap' }, [
         el('table', {}, [
           el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa', 'Análise'].map(function (h) { return el('th', { text: h }); }))]),
           el('tbody', {}, lista.map(function (c) {
@@ -647,7 +656,7 @@ function paginaClientes() {
             return el('tr', {}, [
               el('td', {}, [el('strong', { text: c.nome }), c.idExterno ? el('div', { class: 'muted', text: c.idExterno }) : null]),
               el('td', { text: c.segmento }),
-              el('td', { text: nome(c.responsavelEmail) }),
+              el('td', {}, [celulaResponsavel(c)]),
               el('td', {}, [etapa]),
               el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') }),
               el('td', {}, [celulaAnalise(c)])
@@ -689,34 +698,164 @@ function celulaAnalise(c) {
   return el('div', { class: 'cell-actions' }, [c.linkAnalise ? linkAnalise(c) : null, editar]);
 }
 
-function formCliente() {
-  if (!S.responsaveis.length) {
-    return el('p', { class: 'notice', text: 'Para adicionar clientes, primeiro cadastre em Usuários um onboarder do segmento (o responsável pelo cliente precisa ser um onboarder).' });
+/** Clientes entram de dois jeitos: colando da planilha (vários) ou um a um. */
+function entradaClientes() {
+  var modo = UI.modoEntrada || 'colar';
+  return el('section', { class: 'panel' }, [
+    el('h2', { class: 'h2', text: 'Colocar clientes' }),
+    el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Como colocar clientes' }, [['colar', 'Colar da planilha (vários)'], ['um', 'Um cliente']].map(function (m) {
+      return el('button', { type: 'button', role: 'tab', 'aria-selected': String(modo === m[0]), text: m[1], onclick: function () { UI.modoEntrada = m[0]; desenhar(); } });
+    })),
+    modo === 'colar' ? painelImportar() : formCliente()
+  ]);
+}
+
+function painelImportar() {
+  var imp = UI.imp || (UI.imp = { texto: '', etapaPadrao: ETAPAS[0], segmentoPadrao: '', mapas: { etapa: {}, segmento: {} }, previa: null, carregando: false });
+  function opcoes() { return { etapaPadrao: imp.etapaPadrao, segmentoPadrao: imp.segmentoPadrao, mapas: imp.mapas }; }
+  function prever() {
+    if (!imp.texto.trim()) { avisar('Cole as linhas da planilha primeiro.', true); return; }
+    imp.carregando = true;
+    desenhar();
+    chamar('apiPreverImportacao', imp.texto, opcoes()).then(function (p) { imp.previa = p; })
+      .catch(function (e) { imp.previa = null; avisar(e.message, true); })
+      .then(function () {
+        imp.carregando = false;
+        desenhar();
+        var r = document.getElementById('imp-previa');
+        if (r) r.scrollIntoView({ block: 'start' });
+      });
   }
-  var f = UI.cliente || (UI.cliente = { idExterno: '', nome: '', responsavelEmail: '', etapa: 'Pre Onboarding', desde: hojeLocal() });
-  var resp = S.responsaveis.filter(function (r) { return r.email === f.responsavelEmail; })[0];
-  return el('form', { class: 'form panel', onsubmit: function (e) {
+  function importar() {
+    agir(chamar('apiImportarClientes', imp.texto, opcoes())).then(function (ok) {
+      if (!ok) return;
+      var r = S.importacao || { importados: 0, deFora: 0 };
+      UI.imp = null;
+      desenhar();
+      avisar(plural(r.importados, 'cliente importado', 'clientes importados') + (r.deFora ? '; ' + r.deFora + ' ficaram de fora.' : '.'));
+    });
+  }
+  function seletor(id, rotulo, valor, lista, onchange) {
+    return el('div', { class: 'field' }, [el('label', { for: id, text: rotulo }),
+      el('select', { id: id, class: 'input', onchange: function (e) { onchange(e.target.value); if (imp.previa) prever(); } }, lista.map(function (o) {
+        return el('option', { value: o[0], selected: o[0] === valor ? 'selected' : null, text: o[1] });
+      }))]);
+  }
+  var p = imp.previa;
+  return el('div', { class: 'stack' }, [
+    el('ol', { class: 'imp-steps' }, [
+      el('li', { text: 'Abra a sua planilha ou a exportação do Astrobox.' }),
+      el('li', { text: 'Selecione as linhas dos clientes junto com a linha do cabeçalho (Ctrl+A seleciona tudo) e copie (Ctrl+C).' }),
+      el('li', { text: 'Cole aqui (Ctrl+V) e clique em Ver prévia. Nada é gravado até você clicar em Importar.' })
+    ]),
+    el('div', { class: 'field' }, [
+      el('label', { for: 'imp-texto', text: 'Linhas copiadas da planilha' }),
+      el('textarea', { id: 'imp-texto', class: 'input imp-texto', spellcheck: 'false', placeholder: 'Cliente\tCódigo\tSegmento\tResponsável\tEtapa\tDesde\nLumen Saúde\tAB-1042\tN4\tmarina@empresa.com\tWelcome\t01/10/2026', oninput: function (e) {
+        imp.texto = e.target.value;
+        if (imp.previa) {
+          imp.previa = null;
+          desenhar();
+          var t = document.getElementById('imp-texto');
+          t.focus();
+          t.setSelectionRange(t.value.length, t.value.length);
+        }
+      } }, [imp.texto])
+    ]),
+    el('div', { class: 'form' }, [
+      seletor('imp-etapa', 'Etapa de quem vier sem etapa', imp.etapaPadrao, ETAPAS.map(function (et) { return [et, et]; }), function (v) { imp.etapaPadrao = v; }),
+      seletor('imp-seg', 'Segmento de quem vier sem segmento', imp.segmentoPadrao, [['', 'Usar o do responsável']].concat(S.segmentosCadastro.map(function (sg) { return [sg, sg + ' · ' + SEGMENTOS[sg]]; })), function (v) { imp.segmentoPadrao = v; })
+    ]),
+    el('div', { class: 'actions' }, [el('button', { class: 'btn btn-secondary', type: 'button', disabled: imp.carregando ? true : null, text: imp.carregando ? 'Lendo…' : 'Ver prévia', onclick: prever })]),
+    p ? previaImportacao(p, imp, prever, importar) : null
+  ]);
+}
+
+function previaImportacao(p, imp, prever, importar) {
+  var c = p.contagem;
+  var entram = c.ok + c.aviso;
+  var ordem = { erro: 0, aviso: 1, repetido: 2, ok: 3 };
+  var linhas = p.linhas.slice().sort(function (a, b) { return ordem[a.situacao] - ordem[b.situacao] || a.linha - b.linha; });
+  var rotulo = { ok: ['Entra', 'tag-ok'], aviso: ['Entra, com aviso', 'tag-stage'], repetido: ['Já existe', 'tag-manual'], erro: ['Fica de fora', 'tag-stale'] };
+  function mapear(tipo, valores, lista) {
+    return valores.map(function (v) {
+      return el('div', { class: 'field' }, [el('label', { text: (tipo === 'etapa' ? 'Etapa' : 'Segmento') + ' "' + v + '" da planilha é:' }),
+        el('select', { class: 'input', 'aria-label': (tipo === 'etapa' ? 'Etapa' : 'Segmento') + ' equivalente a ' + v, onchange: function (e) { imp.mapas[tipo][v] = e.target.value; prever(); } },
+          [el('option', { value: '', text: 'Escolha…' })].concat(lista.map(function (o) { return el('option', { value: o, selected: imp.mapas[tipo][v] === o ? 'selected' : null, text: o }); })))]);
+    });
+  }
+  var desconhecidas = mapear('etapa', p.desconhecidos.etapa, ETAPAS).concat(mapear('segmento', p.desconhecidos.segmento, S.segmentosCadastro));
+  return el('div', { id: 'imp-previa', class: 'stack imp-previa' }, [
+    el('h3', { class: 'imp-sum' }, [
+      el('strong', { text: plural(entram, 'cliente vai entrar', 'clientes vão entrar') }),
+      el('span', { text: [c.aviso ? c.aviso + ' com aviso' : '', c.repetido ? c.repetido + ' já cadastrado' + (c.repetido > 1 ? 's' : '') : '', c.erro ? c.erro + ' com erro (ficam de fora)' : ''].filter(Boolean).join(' · ') })
+    ]),
+    el('p', { class: 'muted', text: 'Colunas: ' + p.colunas.map(function (k) { return '"' + k.cabecalho + '" → ' + (k.campo || 'ignorada'); }).join(' · ') +
+      (p.faltando.length ? '. Não encontrei: ' + p.faltando.join(', ') + '.' : '.') }),
+    desconhecidas.length ? el('div', { class: 'notice stack' }, [el('strong', { text: 'O app não conhece estes valores. Diga o que eles são e a prévia se atualiza:' }), el('div', { class: 'form' }, desconhecidas)]) : null,
+    el('div', { class: 'table-wrap' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, ['Linha', 'Cliente', 'Segmento', 'Responsável', 'Etapa', 'Desde', 'Situação'].map(function (h) { return el('th', { text: h }); }))]),
+      el('tbody', {}, linhas.slice(0, 300).map(function (l) {
+        return el('tr', {}, [
+          el('td', { text: String(l.linha) }),
+          el('td', {}, [el('strong', { text: l.nome || '—' }), l.idExterno ? el('div', { class: 'muted', text: l.idExterno }) : null]),
+          el('td', { text: l.segmento || '—' }),
+          el('td', { text: l.responsavelTexto || '—' }),
+          el('td', { text: l.etapa || '—' }),
+          el('td', { text: l.desde ? data(l.desde + 'T12:00:00Z') : '—' }),
+          el('td', {}, [el('span', { class: 'tag ' + rotulo[l.situacao][1], text: rotulo[l.situacao][0] }), l.motivo ? el('div', { class: 'muted', text: l.motivo }) : null])
+        ]);
+      }))
+    ])]),
+    linhas.length > 300 ? el('p', { class: 'muted', text: 'Mostrando 300 de ' + linhas.length + ' linhas (os problemas aparecem primeiro).' }) : null,
+    el('div', { class: 'actions' }, [
+      el('button', { class: 'btn btn-primary btn-wide', type: 'button', disabled: entram ? null : true, onclick: importar },
+        [entram ? 'Importar ' + plural(entram, 'cliente', 'clientes') : 'Nada para importar', el('span', { 'aria-hidden': 'true', text: '→' })]),
+      el('button', { class: 'btn btn-secondary', type: 'button', text: 'Limpar', onclick: function () { UI.imp = null; desenhar(); } })
+    ])
+  ]);
+}
+
+function formCliente() {
+  var segs = S.segmentosCadastro;
+  var f = UI.cliente || (UI.cliente = { idExterno: '', nome: '', segmento: segs[0], responsavelEmail: '', etapa: ETAPAS[0], desde: hojeLocal() });
+  var doSeg = S.responsaveis.filter(function (r) { return r.segmento === f.segmento; });
+  return el('form', { class: 'form', onsubmit: function (e) {
     e.preventDefault();
-    var dados = { idExterno: f.idExterno, nome: f.nome, responsavelEmail: f.responsavelEmail, segmento: resp ? resp.segmento : '', etapa: f.etapa, desde: f.desde };
+    var dados = { idExterno: f.idExterno, nome: f.nome, responsavelEmail: f.responsavelEmail, segmento: f.segmento, etapa: f.etapa, desde: f.desde };
     agir(chamar('apiAdicionarCliente', dados), f.nome + ' foi adicionado.').then(function (ok) {
-      if (ok) { UI.cliente = { idExterno: '', nome: '', responsavelEmail: f.responsavelEmail, etapa: f.etapa, desde: f.desde }; desenhar(); }
+      if (ok) { UI.cliente = { idExterno: '', nome: '', segmento: f.segmento, responsavelEmail: f.responsavelEmail, etapa: f.etapa, desde: f.desde }; desenhar(); }
     });
   } }, [
-    el('h2', { class: 'h2 full', text: 'Adicionar cliente' }),
     el('div', { class: 'field' }, [el('label', { for: 'c-nome', text: 'Nome do cliente' }), el('input', { id: 'c-nome', class: 'input', required: true, maxlength: '140', value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
     el('div', { class: 'field' }, [el('label', { for: 'c-id', text: 'Código no Astrobox (opcional)' }), el('input', { id: 'c-id', class: 'input', maxlength: '60', value: f.idExterno, oninput: function (e) { f.idExterno = e.target.value; } })]),
-    el('div', { class: 'field' }, [el('label', { for: 'c-resp', text: 'Responsável' }),
-      el('select', { id: 'c-resp', class: 'input', required: true, onchange: function (e) { f.responsavelEmail = e.target.value; desenhar(); } },
-        [el('option', { value: '', text: 'Escolha o onboarder…' })].concat(S.responsaveis.map(function (r) {
-          return el('option', { value: r.email, selected: r.email === f.responsavelEmail ? 'selected' : null, text: r.nome + ' · ' + r.segmento });
+    el('div', { class: 'field' }, [el('label', { for: 'c-seg', text: 'Segmento' }),
+      el('select', { id: 'c-seg', class: 'input', onchange: function (e) { f.segmento = e.target.value; f.responsavelEmail = ''; desenhar(); } }, segs.map(function (sg) {
+        return el('option', { value: sg, selected: sg === f.segmento ? 'selected' : null, text: sg + ' · ' + SEGMENTOS[sg] });
+      }))]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-resp', text: 'Responsável (opcional)' }),
+      el('select', { id: 'c-resp', class: 'input', onchange: function (e) { f.responsavelEmail = e.target.value; } },
+        [el('option', { value: '', text: doSeg.length ? 'Sem responsável por enquanto' : 'Nenhum onboarder ' + f.segmento + ' cadastrado ainda' })].concat(doSeg.map(function (r) {
+          return el('option', { value: r.email, selected: r.email === f.responsavelEmail ? 'selected' : null, text: r.nome });
         })))]),
-    el('div', { class: 'field' }, [el('label', { text: 'Segmento' }), el('p', { class: 'muted', style: 'min-height:44px;display:flex;align-items:center;margin:0', text: resp ? resp.segmento + ' · ' + SEGMENTOS[resp.segmento] + ' (vem do responsável)' : 'Vem do responsável' })]),
     el('div', { class: 'field' }, [el('label', { for: 'c-etapa', text: 'Etapa atual' }),
       el('select', { id: 'c-etapa', class: 'input', onchange: function (e) { f.etapa = e.target.value; } },
         ETAPAS.map(function (et) { return el('option', { value: et, selected: et === f.etapa ? 'selected' : null, text: et }); }))]),
     el('div', { class: 'field' }, [el('label', { for: 'c-desde', text: 'Na etapa desde' }), el('input', { id: 'c-desde', class: 'input', type: 'date', required: true, max: hojeLocal(), value: f.desde, oninput: function (e) { f.desde = e.target.value; } })]),
     el('div', { class: 'full actions' }, [el('button', { class: 'btn btn-primary', type: 'submit', text: 'Adicionar cliente' })])
   ]);
+}
+
+/** Responsável na tabela: liderança do segmento e admin escolhem; os outros só veem. */
+function celulaResponsavel(c) {
+  if (!c.podeAtribuir) return c.responsavelEmail ? el('span', { text: nome(c.responsavelEmail) }) : el('span', { class: 'muted', text: 'Sem responsável' });
+  var opcoes = S.responsaveis.filter(function (r) { return r.segmento === c.segmento; });
+  var conhecido = opcoes.some(function (r) { return r.email === c.responsavelEmail; });
+  return el('select', { class: 'input' + (c.semDono ? ' input-alert' : ''), 'aria-label': 'Responsável por ' + c.nome, onchange: function (e) {
+    var v = e.target.value;
+    agir(chamar('apiMudarResponsavel', c.id, v), v ? c.nome + ' agora é de ' + nome(v) + '.' : c.nome + ' ficou sem responsável.');
+  } }, [el('option', { value: '', selected: c.responsavelEmail ? null : 'selected', text: 'Sem responsável' })]
+    .concat(c.responsavelEmail && !conhecido ? [el('option', { value: c.responsavelEmail, selected: 'selected', text: nome(c.responsavelEmail) + ' (precisa ajustar)' })] : [])
+    .concat(opcoes.map(function (r) { return el('option', { value: r.email, selected: r.email === c.responsavelEmail ? 'selected' : null, text: r.nome }); })));
 }
 
 function paginaOrientacao() {
