@@ -336,7 +336,8 @@ function configurar() {
   var ss = planilha_();
   prepararAbas_(ss);
   cadastrarDonaComoAdmin_();
-  var msg = 'Pronto. Planilha: ' + ss.getUrl() + ' · Admin: ' + Session.getEffectiveUser().getEmail();
+  var versao = typeof VERSAO_ONBOARDINHO === 'undefined' ? '?' : VERSAO_ONBOARDINHO;
+  var msg = 'Pronto. Versão ' + versao + ' · Planilha: ' + ss.getUrl() + ' · Admin: ' + Session.getEffectiveUser().getEmail();
   Logger.log(msg);
   return msg;
 }

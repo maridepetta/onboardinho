@@ -443,7 +443,7 @@ function telaApp() {
       el('nav', { class: 'nav', 'aria-label': 'Principal' }, paginas.map(function (p) {
         return el('button', { type: 'button', 'aria-current': UI.pagina === p[0] ? 'page' : null, text: p[1], onclick: function () { UI.pagina = p[0]; UI.ajuste = null; desenhar(); window.scrollTo(0, 0); } });
       })),
-      el('span', { class: 'who', text: eu.nome + ' · ' + (eu.admin ? 'Admin' : PAPEIS[eu.papel]) })
+      el('span', { class: 'who', title: S.versao ? 'Versão ' + S.versao : null, text: eu.nome + ' · ' + (eu.admin ? 'Admin' : PAPEIS[eu.papel]) })
     ]),
     conteudo
   ]);
@@ -644,7 +644,8 @@ function paginaClientes() {
       el('p', { class: 'lead', text: lider
         ? 'Cole os clientes da sua planilha logo abaixo ou adicione um por um. Na tabela, escolha o responsável e troque a etapa quando o cliente avançar: a contagem de dias recomeça.'
         : 'Quando um cliente seu muda de etapa, troque aqui. Assim as orientações e a contagem de dias ficam certas.' }),
-      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
+      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null,
+      S.eu.admin ? el('p', { class: 'muted', text: 'Versão do código: ' + (S.versao || 'arquivos separados') }) : null
     ]),
     S.eu.admin ? el('p', { class: foraDaTela > 0 ? 'warn' : 'muted', text: 'A aba Clientes tem ' + plural(S.totalLinhasClientes, 'linha', 'linhas') +
       ' com dados; ' + plural(S.clientes.length, 'aparece', 'aparecem') + ' aqui.' + (foraDaTela > 0 ? ' Veja abaixo o motivo das que ficaram de fora.' : '') }) : null,
@@ -1086,7 +1087,8 @@ function paginaUsuarios() {
       el('p', { class: 'kicker', text: 'Admin' }),
       el('h1', { class: 'title', text: 'Usuários' }),
       el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha.' }),
-      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
+      S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null,
+      S.eu.admin ? el('p', { class: 'muted', text: 'Versão do código: ' + (S.versao || 'arquivos separados') }) : null
     ]),
     el('form', { class: 'form panel', onsubmit: function (e) {
       e.preventDefault();

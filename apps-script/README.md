@@ -34,11 +34,11 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
 2. Na planilha: **Extensões → Apps Script**.
 3. No editor, em **Configurações do projeto** (engrenagem), marque
    **"Mostrar arquivo de manifesto appsscript.json no editor"**.
-4. Crie os arquivos e cole o conteúdo desta pasta:
+4. São só 3 arquivos no editor:
    - `appsscript.json` (substitua o que existe)
-   - `Code.gs` (substitua o que existe)
-   - `Regras.gs` e `Dados.gs`: botão **+ → Script**, com o nome sem o `.gs`
+   - `Código.gs`: cole **todo** o conteúdo de **`Onboardinho.gs`** (o código do servidor num arquivo só)
    - `Index.html`: botão **+ → HTML**, com o nome `Index`
+   Se existirem `Dados.gs` ou `Regras.gs` de versões antigas, **apague** (eles já estão dentro do Onboardinho.gs).
 5. Salve. (Opcional) Escolha a função **`configurar`** e clique em **Executar** para autorizar e
    ver o link da planilha no registro. Se pular, o app se prepara sozinho na primeira vez que
    o link for aberto: usa a planilha ligada ao projeto ou, se o projeto foi criado em
@@ -78,6 +78,12 @@ no teste aparece para o time. A prévia não grava nada.
 | Admin | tudo | cadastrar usuários, orientações gerais, decidir qualquer pedido |
 
 Ninguém decide o próprio pedido. Mudança de papel: só admin.
+
+## Para quem mexe no código
+
+`Regras.gs`, `Dados.gs` e `Code.gs` são as fontes (separadas para testar). Depois de mudar qualquer um,
+rode `npm run montar`, que gera o `Onboardinho.gs` (arquivo único que vai para o editor) com uma
+versão nova; o admin vê a versão na tela Clientes. O teste falha se o `Onboardinho.gs` estiver desatualizado.
 
 ## Testes (fora do Google)
 

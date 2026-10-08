@@ -481,3 +481,16 @@ test("os arquivos carregam em qualquer ordem (o Apps Script usa a ordem de cria�
   const colunas: string[] = app.ABAS.Clientes;
   for (const c of app.CAMPOS_INFO) assert.ok(colunas.includes(c[1]), c[1]);
 });
+
+test("arquivo único (Onboardinho.gs): está em dia com os três arquivos e funciona sozinho", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { montar } = require("../scripts/montar-apps-script.js");
+  const atual = readFileSync(join(__dirname, "..", "apps-script", "Onboardinho.gs"), "utf8");
+  assert.equal(atual, montar(), "rode npm run montar");
+  const fakes = createGoogleFakes({ owner: DONA, email: DONA });
+  const ctx = vm.createContext({ ...fakes.services });
+  vm.runInContext(atual, ctx, { filename: "Onboardinho.gs" });
+  const estado = (ctx as Record<string, () => { tela: string; versao: string }>).apiEstado();
+  assert.equal(estado.tela, "app");
+  assert.match(estado.versao, /^[0-9a-f]{7}$/);
+});
