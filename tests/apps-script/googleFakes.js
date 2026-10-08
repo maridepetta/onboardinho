@@ -86,12 +86,17 @@
       },
       Session: {
         getActiveUser: function () { return { getEmail: function () { return state.email; } }; },
-        getEffectiveUser: function () { return { getEmail: function () { return state.owner; } }; }
+        getEffectiveUser: function () { return { getEmail: function () { return state.owner; } }; },
+        getScriptTimeZone: function () { return 'America/Sao_Paulo'; }
       },
       LockService: {
         getScriptLock: function () { return { waitLock: function () {}, releaseLock: function () {} }; }
       },
-      Utilities: { getUuid: function () { seq += 1; return 'id-' + seq; } },
+      Utilities: {
+        getUuid: function () { seq += 1; return 'id-' + seq; },
+        // Só o formato usado pelo app (yyyy-MM-dd), no fuso de São Paulo (UTC-3, sem horário de verão).
+        formatDate: function (d) { return new Date(d.getTime() - 3 * 3600000).toISOString().slice(0, 10); }
+      },
       Logger: { log: function () {} },
       HtmlService: {
         createHtmlOutputFromFile: function () {

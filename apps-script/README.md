@@ -8,7 +8,8 @@ O app roda no Google: login pela conta Google da empresa, dados numa planilha s�
 - **Banco:** uma planilha com 4 abas (`Usuarios`, `Clientes`, `Orientacoes`, `Pedidos`).
   **Não compartilhe a planilha com o time**: o app roda com a sua permissão e mostra a cada
   pessoa só o que ela pode ver (o segmento dela). Quem tiver a planilha vê tudo.
-- **Clientes:** cole a exportação na aba `Clientes` com as colunas
+- **Clientes:** adicione pelo app (tela **Clientes → Adicionar cliente**, com listas para não errar)
+  ou cole a exportação na aba `Clientes` com as colunas
   `id_externo | nome | segmento | responsavel_email | etapa | desde`. Linhas com problema
   aparecem para o admin na tela Clientes. Use o id do Astrobox em `id_externo`.
 
@@ -41,6 +42,8 @@ Sem isso, o link continua com a versão antiga.
 - No primeiro acesso, a pessoa confirma o papel e o segmento ou pede ajuste.
 - Liderança e admin publicam orientações em **Nova orientação**.
 - O onboarder marca a orientação do cliente como **Feito**.
+- Quando um cliente muda de etapa, o responsável (ou a liderança) troca a etapa na tela **Clientes**;
+  a data "desde" vira hoje.
 
 ## Regras de acesso
 

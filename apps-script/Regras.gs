@@ -42,10 +42,10 @@ function lerEtapa_(valor) {
 function lerData_(valor) {
   if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor.toISOString();
   var v = String(valor == null ? '' : valor).trim();
-  var br = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  var br = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s.*)?$/); // aceita "01/10/2026 00:00" e "01/10/26"
   var iso = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
   var y, m, d;
-  if (br) { d = +br[1]; m = +br[2]; y = +br[3]; }
+  if (br) { d = +br[1]; m = +br[2]; y = br[3].length === 2 ? 2000 + +br[3] : +br[3]; }
   else if (iso) { y = +iso[1]; m = +iso[2]; d = +iso[3]; }
   else return null;
   var data = new Date(Date.UTC(y, m - 1, d, 12));
@@ -68,7 +68,21 @@ function validarLiberacao_(papel, segmentos) {
 
 function podeGerenciarUsuarios_(u) { return !!u && u.admin === true; }
 function podeVerPedidos_(u) { return !!u && (u.admin === true || u.papel === 'lideranca'); }
-function podeVerClientes_(u) { return podeVerPedidos_(u); }
+function podeVerClientes_(u) { return !!u; }
+
+/** Cadastrar cliente: admin (qualquer segmento) ou liderança (só nos seus segmentos). */
+function podeCadastrarCliente_(u, segmento) {
+  if (!u) return false;
+  if (u.admin === true) return true;
+  return u.papel === 'lideranca' && u.segmentos.indexOf(segmento) >= 0;
+}
+
+/** Mudar etapa: o responsável pelo cliente, a liderança do segmento ou admin. */
+function podeEditarCliente_(u, cliente) {
+  if (!u || !cliente) return false;
+  if (normalizarTexto_(cliente.responsavelEmail) === normalizarTexto_(u.email)) return true;
+  return podeCadastrarCliente_(u, cliente.segmento);
+}
 
 /**
  * Quem decide um pedido de ajuste:

@@ -113,6 +113,11 @@ function comTrava_(fn) {
   try { return fn(); } finally { trava.releaseLock(); }
 }
 
+/** Data de hoje (aaaa-mm-dd) no fuso do projeto, não em UTC: à noite no Brasil, UTC já é amanhã. */
+function hoje_() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd');
+}
+
 function iso_(v) {
   if (v instanceof Date) return v.toISOString();
   return v ? String(v) : '';
@@ -149,7 +154,8 @@ function lerClientes_(usuarios) {
   var clientes = [];
   var problemas = [];
   var avisos = [];
-  lerTabela_('Clientes').forEach(function (r) {
+  var linhas = lerTabela_('Clientes');
+  linhas.forEach(function (r) {
     var erros = [];
     var nome = String(r.nome || '').trim();
     var segmento = lerSegmentos_(r.segmento)[0];
@@ -170,6 +176,7 @@ function lerClientes_(usuarios) {
     if (erros.length) { problemas.push('Linha ' + r._linha + ': ' + erros.join('; ') + '.'); return; }
     var idExterno = String(r.id_externo || '').trim();
     clientes.push({
+      linha: r._linha,
       id: idExterno || nome,
       idExterno: idExterno,
       nome: nome,
@@ -179,7 +186,7 @@ function lerClientes_(usuarios) {
       desde: desde
     });
   });
-  return { clientes: clientes, problemas: problemas, avisos: avisos };
+  return { clientes: clientes, problemas: problemas, avisos: avisos, totalLinhas: linhas.length };
 }
 
 function lerOrientacoes_() {

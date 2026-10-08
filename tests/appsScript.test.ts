@@ -202,3 +202,56 @@ test("texto com cara de fórmula é gravado como texto, não como fórmula", () 
   assert.equal(linha[1], '=IMPORTXML("http://x","//a")');
   assert.ok(!JSON.stringify(fakes.sheets).includes("#FORMULA"));
 });
+
+test("adicionar cliente pelo app: só responsável válido, sem duplicar, com permissão", () => {
+  const { app, como, fakes } = cenario();
+  const base = { nome: "Nova Ltda", segmento: "7D", responsavelEmail: "onb7@empresa.com", etapa: "Welcome", desde: "2026-10-01" };
+  assert.throws(() => app.apiAdicionarCliente({ ...base, responsavelEmail: "onb8@empresa.com" }), /onboarder do segmento 7D/);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, responsavelEmail: "lider@empresa.com" }), /onboarder do segmento 7D/);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, etapa: "Fase X" }), /etapa/);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, desde: "2999-01-01" }), /futuro/);
+  const depois = app.apiAdicionarCliente(base);
+  assert.ok(depois.clientes.some((c: { nome: string }) => c.nome === "Nova Ltda"));
+  assert.throws(() => app.apiAdicionarCliente({ ...base, nome: "nova ltda" }), /já está cadastrado/);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, nome: "Outra", idExterno: "AB-1" }), /já está cadastrado/);
+  assert.equal(depois.totalLinhasClientes, 5);
+  // data de hoje passa (no fuso de São Paulo)
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  app.apiAdicionarCliente({ ...base, nome: "Hoje SA", desde: hoje });
+
+  como("lider@empresa.com"); // liderança 6D/7D
+  assert.deepEqual(app.apiEstado().responsaveis.map((r: { email: string }) => r.email), ["onb7@empresa.com"]);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, nome: "X", segmento: "8D", responsavelEmail: "onb8@empresa.com" }), /não pode cadastrar/);
+  app.apiAdicionarCliente({ ...base, nome: "Da Liderança" });
+
+  como("onb7@empresa.com");
+  assert.equal(app.apiEstado().responsaveis.length, 0);
+  assert.throws(() => app.apiAdicionarCliente({ ...base, nome: "Y" }), /não pode cadastrar/);
+  assert.ok(!JSON.stringify(fakes.sheets).includes("#FORMULA"));
+});
+
+test("mudar etapa: responsável, liderança do segmento ou admin; data vira hoje", () => {
+  const { app, como, fakes } = cenario();
+  como("onb8@empresa.com");
+  assert.throws(() => app.apiMudarEtapa("AB-1", "Welcome"), /não encontrado|não pode/); // cliente de outra pessoa
+  como("onb7@empresa.com");
+  const e = app.apiEstado();
+  assert.equal(e.clientes.find((c: { id: string }) => c.id === "AB-1").podeEditar, true);
+  assert.throws(() => app.apiMudarEtapa("AB-1", "Fase X"), /Etapa inválida/);
+  const depois = app.apiMudarEtapa("AB-1", "Accomplished");
+  const lumen = depois.clientes.find((c: { id: string }) => c.id === "AB-1");
+  assert.equal(lumen.etapa, "Accomplished");
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  const linha = fakes.values("Clientes").find((r: string[]) => r[0] === "AB-1");
+  assert.equal(linha[5], hoje);
+  como("lider@empresa.com");
+  app.apiMudarEtapa("AB-2", "Welcome"); // liderança do segmento pode
+});
+
+test("datas como vêm de exportações: com hora, ano com 2 dígitos", () => {
+  const { app } = novoApp();
+  assert.equal(app.lerData_("01/10/2026 00:00:00"), "2026-10-01T12:00:00.000Z");
+  assert.equal(app.lerData_("1/10/26"), "2026-10-01T12:00:00.000Z");
+  assert.equal(app.lerData_("2026-10-01T03:00:00.000Z"), "2026-10-01T12:00:00.000Z");
+  assert.equal(app.lerData_("31/02/2026"), null);
+});

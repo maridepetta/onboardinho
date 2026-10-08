@@ -85,6 +85,7 @@ legend { margin-bottom: 6px; padding: 0; }
 @media (max-width: 720px) { .nav { order: 3; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; } .who { padding-left: 0; border-left: 0; } }
 .page { max-width: 1280px; padding: 36px var(--gutter) 80px; display: flex; flex-direction: column; gap: 28px; }
 .panel { padding-top: 20px; border-top: 2px solid var(--text); display: flex; flex-direction: column; gap: 16px; }
+.form.panel { display: grid; }
 
 /* Início (2b) */
 .split { display: flex; flex-wrap: wrap; min-height: calc(100vh - 72px); }
@@ -350,7 +351,7 @@ function telaApp() {
   var eu = S.eu;
   var paginas = [
     ['inicio', 'Início', true],
-    ['clientes', 'Clientes', podeLideranca()],
+    ['clientes', podeLideranca() ? 'Clientes' : 'Meus clientes', true],
     ['orientacao', 'Nova orientação', podeLideranca()],
     ['meu-acesso', 'Meu acesso', true],
     ['pedidos', S.paraDecidir.length ? 'Pedidos (' + S.paraDecidir.length + ')' : 'Pedidos', podeLideranca()],
@@ -449,19 +450,28 @@ function itemFila(o, i, cliente) {
   ]);
 }
 
+function hojeLocal() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function paginaClientes() {
   var lista = S.clientes.slice().sort(function (a, b) {
     return ETAPAS.indexOf(a.etapa) - ETAPAS.indexOf(b.etapa) || a.nome.localeCompare(b.nome, 'pt-BR');
   });
+  var lider = podeLideranca();
+  var foraDaTela = S.eu.admin ? S.totalLinhasClientes - S.clientes.length : 0;
   return el('main', { class: 'page' }, [
     el('div', { class: 'stack' }, [
       el('p', { class: 'kicker', text: S.eu.admin ? 'Todos os segmentos' : 'Segmentos ' + S.eu.segmentos.join(' + ') }),
-      el('h1', { class: 'title', text: 'Clientes' }),
-      el('p', { class: 'lead', text: S.eu.admin
-        ? 'Os clientes vêm da aba "Clientes" da planilha. Cole a exportação lá com as colunas id_externo, nome, segmento, responsavel_email, etapa e desde (dd/mm/aaaa).'
-        : 'Clientes dos seus segmentos. A lista é atualizada pelo admin.' }),
+      el('h1', { class: 'title', text: lider ? 'Clientes' : 'Meus clientes' }),
+      el('p', { class: 'lead', text: lider
+        ? 'Adicione clientes aqui ou cole a exportação na aba "Clientes" da planilha. Quando um cliente muda de etapa, troque na tabela: a contagem de dias recomeça.'
+        : 'Quando um cliente seu muda de etapa, troque aqui. Assim as orientações e a contagem de dias ficam certas.' }),
       S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null
     ]),
+    S.eu.admin ? el('p', { class: foraDaTela > 0 ? 'warn' : 'muted', text: 'A aba Clientes tem ' + plural(S.totalLinhasClientes, 'linha', 'linhas') +
+      ' com dados; ' + plural(S.clientes.length, 'aparece', 'aparecem') + ' aqui.' + (foraDaTela > 0 ? ' Veja abaixo o motivo das que ficaram de fora.' : '') }) : null,
     S.avisosClientes && S.avisosClientes.length ? el('div', { class: 'notice' }, [
       el('strong', { text: plural(S.avisosClientes.length, 'cliente precisa', 'clientes precisam') + ' de novo responsável:' }),
       el('ul', {}, S.avisosClientes.slice(0, 30).map(function (p) { return el('li', { text: p }); }))
@@ -470,21 +480,60 @@ function paginaClientes() {
       el('strong', { text: plural(S.problemasClientes.length, 'linha da aba Clientes não entrou', 'linhas da aba Clientes não entraram') + ':' }),
       el('ul', {}, S.problemasClientes.slice(0, 30).map(function (p) { return el('li', { text: p }); }))
     ]) : null,
-    lista.length === 0 ? el('p', { class: 'empty', text: 'Nenhum cliente ainda.' }) : el('div', { class: 'table-wrap' }, [
-      el('table', {}, [
-        el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa'].map(function (h) { return el('th', { text: h }); }))]),
-        el('tbody', {}, lista.map(function (c) {
-          var d = dias(c.desde);
-          return el('tr', {}, [
-            el('td', {}, [el('strong', { text: c.nome }), c.idExterno ? el('div', { class: 'muted', text: c.idExterno }) : null]),
-            el('td', { text: c.segmento }),
-            el('td', { text: nome(c.responsavelEmail) }),
-            el('td', { text: c.etapa }),
-            el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') })
-          ]);
-        }))
+    lider ? formCliente() : null,
+    el('section', { class: 'stack' }, [
+      el('h2', { class: 'h2', text: plural(lista.length, 'cliente', 'clientes') }),
+      lista.length === 0 ? el('p', { class: 'empty', text: lider ? 'Nenhum cliente ainda. Adicione o primeiro acima.' : 'Nenhum cliente seu cadastrado ainda.' }) : el('div', { class: 'table-wrap' }, [
+        el('table', {}, [
+          el('thead', {}, [el('tr', {}, ['Cliente', 'Segmento', 'Responsável', 'Etapa', 'Na etapa'].map(function (h) { return el('th', { text: h }); }))]),
+          el('tbody', {}, lista.map(function (c) {
+            var d = dias(c.desde);
+            var etapa = c.podeEditar
+              ? el('select', { class: 'input', 'aria-label': 'Etapa de ' + c.nome, onchange: function (e) {
+                  agir(chamar('apiMudarEtapa', c.id, e.target.value), c.nome + ' agora está em ' + e.target.value + '.');
+                } }, ETAPAS.map(function (et) { return el('option', { value: et, selected: et === c.etapa ? 'selected' : null, text: et }); }))
+              : el('span', { text: c.etapa });
+            return el('tr', {}, [
+              el('td', {}, [el('strong', { text: c.nome }), c.idExterno ? el('div', { class: 'muted', text: c.idExterno }) : null]),
+              el('td', { text: c.segmento }),
+              el('td', { text: nome(c.responsavelEmail) }),
+              el('td', {}, [etapa]),
+              el('td', { class: d > 10 ? 'late' : null, text: plural(d, 'dia', 'dias') })
+            ]);
+          }))
+        ])
       ])
     ])
+  ]);
+}
+
+function formCliente() {
+  if (!S.responsaveis.length) {
+    return el('p', { class: 'notice', text: 'Para adicionar clientes, primeiro cadastre em Usuários um onboarder do segmento (o responsável pelo cliente precisa ser um onboarder).' });
+  }
+  var f = UI.cliente || (UI.cliente = { idExterno: '', nome: '', responsavelEmail: '', etapa: 'Pre Onboarding', desde: hojeLocal() });
+  var resp = S.responsaveis.filter(function (r) { return r.email === f.responsavelEmail; })[0];
+  return el('form', { class: 'form panel', onsubmit: function (e) {
+    e.preventDefault();
+    var dados = { idExterno: f.idExterno, nome: f.nome, responsavelEmail: f.responsavelEmail, segmento: resp ? resp.segmento : '', etapa: f.etapa, desde: f.desde };
+    agir(chamar('apiAdicionarCliente', dados), f.nome + ' foi adicionado.').then(function (ok) {
+      if (ok) { UI.cliente = { idExterno: '', nome: '', responsavelEmail: f.responsavelEmail, etapa: f.etapa, desde: f.desde }; desenhar(); }
+    });
+  } }, [
+    el('h2', { class: 'h2 full', text: 'Adicionar cliente' }),
+    el('div', { class: 'field' }, [el('label', { for: 'c-nome', text: 'Nome do cliente' }), el('input', { id: 'c-nome', class: 'input', required: true, maxlength: '140', value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-id', text: 'Código no Astrobox (opcional)' }), el('input', { id: 'c-id', class: 'input', maxlength: '60', value: f.idExterno, oninput: function (e) { f.idExterno = e.target.value; } })]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-resp', text: 'Responsável' }),
+      el('select', { id: 'c-resp', class: 'input', required: true, onchange: function (e) { f.responsavelEmail = e.target.value; desenhar(); } },
+        [el('option', { value: '', text: 'Escolha o onboarder…' })].concat(S.responsaveis.map(function (r) {
+          return el('option', { value: r.email, selected: r.email === f.responsavelEmail ? 'selected' : null, text: r.nome + ' · ' + r.segmento });
+        })))]),
+    el('div', { class: 'field' }, [el('label', { text: 'Segmento' }), el('p', { class: 'muted', style: 'min-height:44px;display:flex;align-items:center;margin:0', text: resp ? resp.segmento + ' · ' + SEGMENTOS[resp.segmento] + ' (vem do responsável)' : 'Vem do responsável' })]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-etapa', text: 'Etapa atual' }),
+      el('select', { id: 'c-etapa', class: 'input', onchange: function (e) { f.etapa = e.target.value; } },
+        ETAPAS.map(function (et) { return el('option', { value: et, selected: et === f.etapa ? 'selected' : null, text: et }); }))]),
+    el('div', { class: 'field' }, [el('label', { for: 'c-desde', text: 'Na etapa desde' }), el('input', { id: 'c-desde', class: 'input', type: 'date', required: true, max: hojeLocal(), value: f.desde, oninput: function (e) { f.desde = e.target.value; } })]),
+    el('div', { class: 'full actions' }, [el('button', { class: 'btn btn-primary', type: 'submit', text: 'Adicionar cliente' })])
   ]);
 }
 

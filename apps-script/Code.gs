@@ -65,6 +65,9 @@ function apiEstado() {
   precisa[eu.email] = true;
   precisa[eu.liberadoPor] = true;
   clientes.forEach(function (c) { precisa[c.responsavelEmail] = true; });
+  usuarios.forEach(function (u) {
+    if (u.papel === 'onboarder' && u.segmentos.length === 1 && podeCadastrarCliente_(eu, u.segmentos[0])) precisa[u.email] = true;
+  });
   paraDecidir.concat(historico).forEach(function (p) { precisa[p.email] = true; precisa[p.decididoPor] = true; });
   var nomes = {};
   usuarios.forEach(function (u) { if (eu.admin || precisa[u.email]) nomes[u.email] = u.nome || u.email; });
@@ -77,7 +80,14 @@ function apiEstado() {
     agora: new Date().toISOString(),
     eu: semLinha_(eu),
     nomes: nomes,
-    clientes: clientes,
+    clientes: clientes.map(function (c) {
+      return Object.assign(semLinha_(c), { podeEditar: podeEditarCliente_(eu, c) });
+    }),
+    // Onboarders que podem ser responsáveis no formulário "Adicionar cliente".
+    responsaveis: usuarios.filter(function (u) {
+      return u.papel === 'onboarder' && u.segmentos.length === 1 && podeCadastrarCliente_(eu, u.segmentos[0]);
+    }).map(function (u) { return { email: u.email, nome: u.nome || u.email, segmento: u.segmentos[0] }; }),
+    totalLinhasClientes: eu.admin ? lidos.totalLinhas : 0,
     orientacoes: orientacoes.map(function (o) {
       var c = clientesPorId[o.cliente];
       return Object.assign(semLinha_(o), { podeConcluir: podeConcluir_(eu, o, c) });
@@ -237,6 +247,59 @@ function apiConcluirOrientacao(id) {
     atualizar_('Orientacoes', o.linha, {
       status: 'concluida', concluida_por: eu.email, concluida_em: new Date().toISOString()
     });
+    return apiEstado();
+  });
+}
+
+// ---------- Clientes ----------
+
+/** dados: { idExterno?, nome, segmento, responsavelEmail, etapa, desde (aaaa-mm-dd ou dd/mm/aaaa) } */
+function apiAdicionarCliente(dados) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    dados = dados || {};
+    var nome = String(dados.nome || '').trim().slice(0, 140);
+    var idExterno = String(dados.idExterno || '').trim().slice(0, 60);
+    var segmento = lerSegmentos_([dados.segmento || ''])[0];
+    var email = String(dados.responsavelEmail || '').trim().toLowerCase();
+    var etapa = lerEtapa_(dados.etapa);
+    var desde = lerData_(dados.desde);
+    if (!nome) throw new Error('Informe o nome do cliente.');
+    if (!segmento) throw new Error('Escolha o segmento.');
+    if (!podeCadastrarCliente_(eu, segmento)) throw new Error('Você não pode cadastrar clientes em ' + segmento + '.');
+    var dono = usuarios.filter(function (u) { return u.email === email; })[0];
+    if (!dono || dono.papel !== 'onboarder' || dono.segmentos.indexOf(segmento) < 0) {
+      throw new Error('Escolha um onboarder do segmento ' + segmento + ' como responsável.');
+    }
+    if (!etapa) throw new Error('Escolha a etapa.');
+    if (!desde) throw new Error('Data inválida.');
+    if (desde.slice(0, 10) > hoje_()) throw new Error('A data não pode ser no futuro.');
+    var existentes = lerClientes_(usuarios).clientes;
+    var repetido = existentes.some(function (c) {
+      return idExterno ? c.idExterno === idExterno : (!c.idExterno && normalizarTexto_(c.nome) === normalizarTexto_(nome) && c.segmento === segmento);
+    });
+    if (repetido) throw new Error('Esse cliente já está cadastrado.');
+    inserir_('Clientes', {
+      id_externo: idExterno, nome: nome, segmento: segmento, responsavel_email: email,
+      etapa: etapa, desde: desde.slice(0, 10)
+    });
+    return apiEstado();
+  });
+}
+
+/** Muda a etapa do cliente e marca "desde" como hoje. */
+function apiMudarEtapa(idCliente, etapaNova) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    var etapa = lerEtapa_(etapaNova);
+    if (!etapa) throw new Error('Etapa inválida.');
+    var cliente = lerClientes_(usuarios).clientes.filter(function (c) { return c.id === String(idCliente); })[0];
+    if (!cliente) throw new Error('Cliente não encontrado.');
+    if (!podeEditarCliente_(eu, cliente)) throw new Error('Você não pode mudar este cliente.');
+    if (cliente.etapa === etapa) return apiEstado();
+    atualizar_('Clientes', cliente.linha, { etapa: etapa, desde: hoje_() });
     return apiEstado();
   });
 }
