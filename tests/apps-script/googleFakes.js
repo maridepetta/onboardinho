@@ -110,8 +110,14 @@
       },
       Logger: { log: function () {} },
       HtmlService: {
+        // indexHtml: conteúdo do Index.html no editor (para simular arquivo colado pela metade).
         createHtmlOutputFromFile: function () {
-          var out = { setTitle: function () { return out; }, addMetaTag: function () { return out; } };
+          var conteudo = (opts && opts.indexHtml) || '<html><body>…<!-- FIM DO INDEX --></body></html>';
+          var out = { tipo: 'index', getContent: function () { return conteudo; }, setTitle: function () { return out; }, addMetaTag: function () { return out; } };
+          return out;
+        },
+        createHtmlOutput: function (html) {
+          var out = { tipo: 'aviso', getContent: function () { return html; }, setTitle: function () { return out; }, addMetaTag: function () { return out; } };
           return out;
         }
       }

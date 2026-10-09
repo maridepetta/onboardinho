@@ -494,3 +494,15 @@ test("arquivo único (Onboardinho.gs): está em dia com os três arquivos e func
   assert.equal(estado.tela, "app");
   assert.match(estado.versao, /^[0-9a-f]{7}$/);
 });
+
+test("Index.html colado pela metade: o servidor avisa em vez de página em branco", () => {
+  const index = readFileSync(join(__dirname, "..", "apps-script", "Index.html"), "utf8");
+  for (const [conteudo, esperado] of [[index, "index"], [index.slice(0, 20000), "aviso"]] as const) {
+    const fakes = createGoogleFakes({ owner: DONA, email: DONA, indexHtml: conteudo });
+    const ctx = vm.createContext({ ...fakes.services });
+    GS.forEach((code) => vm.runInContext(code, ctx));
+    const pagina = (ctx as Record<string, () => { tipo: string; getContent: () => string }>).doGet();
+    assert.equal(pagina.tipo, esperado);
+    if (esperado === "aviso") assert.match(pagina.getContent(), /Index.html está incompleto/);
+  }
+});

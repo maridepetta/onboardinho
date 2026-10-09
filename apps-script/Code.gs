@@ -9,7 +9,18 @@
  */
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  var pagina = HtmlService.createHtmlOutputFromFile('Index');
+  // Index.html colado pela metade deixa a página em branco, sem erro nenhum. Avisa em vez disso.
+  if (pagina.getContent().indexOf('FIM DO INDEX') < 0) {
+    return HtmlService.createHtmlOutput(
+      '<div style="max-width:640px;margin:48px auto;font:16px/1.5 system-ui,sans-serif;color:#201e1d">' +
+      '<h1 style="font-size:24px">O arquivo Index.html está incompleto.</h1>' +
+      '<p>Ele foi colado pela metade no editor do Apps Script. Cole de novo o Index.html inteiro, ' +
+      'role até o fim e confira se as últimas linhas são <code>&lt;!-- FIM DO INDEX ... --&gt;</code>, ' +
+      '<code>&lt;/body&gt;</code> e <code>&lt;/html&gt;</code>. Salve e recarregue esta página.</p></div>'
+    ).setTitle('Onboardinho: instalação incompleta');
+  }
+  return pagina
     .setTitle('Onboardinho')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }

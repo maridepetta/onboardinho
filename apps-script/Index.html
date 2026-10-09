@@ -5,6 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base target="_top">
 <title>Onboardinho</title>
+<script>
+// Se o código abaixo não rodar (arquivo colado pela metade, erro de JavaScript), mostra o motivo
+// em vez de deixar a página em branco. Usa só estilos inline: o CSS também pode ter sido cortado.
+(function () {
+  function mostrar(titulo, texto) {
+    var caixa = document.getElementById('erro-carga');
+    if (!caixa) {
+      caixa = document.createElement('div');
+      caixa.id = 'erro-carga';
+      caixa.setAttribute('role', 'alert');
+      caixa.style.cssText = 'max-width:640px;margin:48px auto;padding:24px;font:16px/1.5 system-ui,sans-serif;color:#201e1d;background:#fff2ef;border-left:4px solid #ae1800';
+      (document.body || document.documentElement).appendChild(caixa);
+    }
+    caixa.textContent = '';
+    var h = document.createElement('strong');
+    h.textContent = titulo;
+    h.style.cssText = 'display:block;font-size:20px;margin-bottom:8px';
+    var p = document.createElement('p');
+    p.textContent = texto;
+    p.style.cssText = 'margin:0;white-space:pre-line';
+    caixa.appendChild(h);
+    caixa.appendChild(p);
+  }
+  var DICA = 'Provável causa: o Index.html foi colado pela metade. No editor do Apps Script, cole o Index.html de novo, ' +
+    'role até o fim e confira se a última linha é </html>. Salve e recarregue esta página.';
+  window.addEventListener('error', function (ev) {
+    var msg = (ev && ev.message) || 'erro desconhecido';
+    var incompleto = /end of input|Unexpected end|unterminated/i.test(msg);
+    mostrar(incompleto ? 'O Index.html está incompleto.' : 'O app encontrou um erro e parou.',
+      (incompleto ? DICA : 'Mande este texto para quem cuida do app:') + '\n\n' + msg + (ev && ev.lineno ? ' (linha ' + ev.lineno + ')' : ''));
+  });
+  setTimeout(function () {
+    if (!window.__onboardinhoIniciou) mostrar('O app não começou a carregar.', DICA);
+  }, 6000);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
 <style>
@@ -201,10 +237,11 @@ td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--divider); vertica
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><p style="margin:48px;font:16px system-ui,sans-serif">Carregando o Onboardinho…</p></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script>
+window.__onboardinhoIniciou = true;
 // ============ Servidor ============
 // Chama uma função api* do Code.gs e devolve uma Promise.
 function chamar(nome) {
@@ -1136,5 +1173,6 @@ chamar('apiEstado').then(function (estado) { S = estado; desenhar(); }).catch(fu
   document.getElementById('root').appendChild(telaSimples('Não foi possível carregar.', e.message));
 });
 </script>
+<!-- FIM DO INDEX: o servidor confere esta linha para saber se o arquivo foi colado inteiro. -->
 </body>
 </html>
