@@ -433,7 +433,7 @@ test("importar: liderança só nos seus segmentos; onboarder não importa; sem c
   const p = app.apiPreverImportacao(colado, {});
   assert.deepEqual(p.linhas.map((l: { acao: string }) => l.acao), ["novo", "erro"]);
   assert.match(p.linhas[1].motivo, /8D não é um segmento seu/);
-  assert.throws(() => app.apiPreverImportacao("Fulano\tCiclano\na\tb", {}), /coluna com o nome do cliente/);
+  assert.throws(() => app.apiPreverImportacao("Fulano\tCiclano\na\tb", {}), /linha de cabeçalho/);
   // CSV com ponto e vírgula e aspas
   const csv = 'Empresa;Segmento;Etapa\n"Silva; Filhos";6D;Welcome';
   assert.equal(app.apiPreverImportacao(csv, {}).linhas[0].nome, "Silva; Filhos");
@@ -530,4 +530,26 @@ test("o servidor aceita o Index.html da versão estável (sem a marca de fim)", 
   const ctx = vm.createContext({ ...fakes.services });
   GS.forEach((code) => vm.runInContext(code, ctx));
   assert.equal((ctx as Record<string, (e: unknown) => { tipo: string }>).doGet({ parameter: {} }).tipo, "index");
+});
+
+test("relatório com título acima do cabeçalho e rodapé do Salesforce: acha o cabeçalho e ignora o resto", () => {
+  const { app, fakes } = cenario();
+  const ss = fakes.services.SpreadsheetApp.openById();
+  ss.insertSheet("Salesforce");
+  fakes.paste("Salesforce", [
+    ["Onboarding Report"],
+    ["Filtered By: Closed Date equals THIS QUARTER"],
+    [],
+    RELATORIO_CAB,
+    acme("Welcome", "Green", "R$ 1.234,56"),
+    ["Grand Totals (1 records)"],
+    ["Confidential Information - Do Not Distribute"],
+    ["Copyright (c) 2000-2026 salesforce.com, inc. All rights reserved."],
+  ]);
+  const r = app.sincronizar();
+  assert.equal(r.erro, undefined, r.erro);
+  assert.equal(r.novos, 1);
+  assert.equal(r.erros, 0);
+  // Sem cabeçalho nenhum: a mensagem mostra o que veio na primeira linha.
+  assert.throws(() => app.apiPreverImportacao("Acme\t123\nBeta\t456", {}), /A primeira linha tem: "Acme \| 123"/);
 });
