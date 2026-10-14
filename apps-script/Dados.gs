@@ -165,6 +165,10 @@ function atualizarVarios_(nome, lista) {
   faixa.setValues(dados.map(function (linha) { return linha.map(celulaSegura_); }));
 }
 
+function removerLinha_(nome, linha) {
+  aba_(nome).deleteRow(linha);
+}
+
 /** Atualiza só as colunas informadas da linha `linha`. */
 function atualizar_(nome, linha, mudancas) {
   var sh = aba_(nome);

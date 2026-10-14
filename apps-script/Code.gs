@@ -260,6 +260,55 @@ function apiCriarUsuario(dados) {
   });
 }
 
+/**
+ * Admin edita nome, papel, segmentação e admin de alguém. E-mail não muda (é a identidade:
+ * para trocar, remova e cadastre de novo). Se papel ou segmentação mudam, a pessoa confirma
+ * o novo perfil no próximo acesso, como no primeiro.
+ * dados: { nome, papel, segmentos, admin }
+ */
+function apiEditarUsuario(email, dados) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    if (!podeGerenciarUsuarios_(eu)) throw new Error('Só admin edita usuários.');
+    var alvo = usuarios.filter(function (u) { return u.email === String(email || '').trim().toLowerCase(); })[0];
+    if (!alvo) throw new Error('Usuário não encontrado.');
+    dados = dados || {};
+    var nome = String(dados.nome || '').trim();
+    var segmentos = lerSegmentos_(dados.segmentos || []);
+    var admin = dados.admin === true;
+    if (!nome) throw new Error('Informe o nome.');
+    var erro = validarLiberacao_(dados.papel, segmentos);
+    if (erro) throw new Error(erro);
+    if (alvo.email === eu.email && !admin) throw new Error('Você não pode tirar o seu próprio acesso de admin.');
+    var mudancas = { nome: nome, admin: admin };
+    var perfilMudou = dados.papel !== alvo.papel || segmentos.join(',') !== alvo.segmentos.join(',');
+    if (perfilMudou) {
+      mudancas.papel = dados.papel;
+      mudancas.segmentos = segmentos.join(', ');
+      mudancas.liberado_por = eu.email;
+      mudancas.liberado_em = new Date().toISOString();
+      mudancas.confirmado_em = alvo.email === eu.email ? alvo.confirmadoEm : ''; // confirma de novo (menos você mesma)
+    }
+    atualizar_('Usuarios', alvo.linha, mudancas);
+    return apiEstado();
+  });
+}
+
+/** Admin tira o acesso de alguém (apaga da aba Usuarios). Os clientes dessa pessoa ficam para reatribuir. */
+function apiRemoverUsuario(email) {
+  return comTrava_(function () {
+    var usuarios = lerUsuarios_();
+    var eu = exigirUsuario_(usuarios);
+    if (!podeGerenciarUsuarios_(eu)) throw new Error('Só admin remove usuários.');
+    var alvo = usuarios.filter(function (u) { return u.email === String(email || '').trim().toLowerCase(); })[0];
+    if (!alvo) throw new Error('Usuário não encontrado.');
+    if (alvo.email === eu.email) throw new Error('Você não pode remover o seu próprio acesso.');
+    removerLinha_('Usuarios', alvo.linha);
+    return apiEstado();
+  });
+}
+
 // ---------- Orientações ----------
 
 /** dados: { titulo, descricao, escopo, segmento?, cliente?, etapa?, refManual, prioridade } */

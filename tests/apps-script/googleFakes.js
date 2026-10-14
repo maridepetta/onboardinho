@@ -43,6 +43,7 @@
     Sheet.prototype.getLastRow = function () { return this.rows.length; };
   Sheet.prototype.getLastColumn = function () { return this.width(); };
     Sheet.prototype.setFrozenRows = function () { return this; };
+    Sheet.prototype.deleteRow = function (n) { this.rows.splice(n - 1, 1); return this; };
     Sheet.prototype.getRange = function (r, c, nr, nc) {
       var rows = this.rows;
       nr = nr || 1;

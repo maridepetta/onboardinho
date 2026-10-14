@@ -1117,48 +1117,102 @@ function paginaPedidos() {
   ]);
 }
 
+/** Campos de papel, segmentação e admin (cadastro e edição). */
+function camposPerfil(f, prefixo, adminTravado) {
+  return [
+    el('fieldset', {}, [el('legend', { text: 'Papel' })].concat(['onboarder', 'lideranca'].map(function (p) {
+      return el('label', { class: 'check' }, [el('input', { type: 'radio', name: prefixo + '-papel', value: p, checked: f.papel === p, onchange: function () { f.papel = p; if (p === 'onboarder') f.segmentos = f.segmentos.slice(0, 1); desenhar(); } }), PAPEIS[p]]);
+    }))),
+    el('fieldset', {}, [el('legend', { text: f.papel === 'onboarder' ? 'Segmentação (uma)' : 'Segmentações' })].concat(ORDEM.map(function (sg) {
+      return el('label', { class: 'check' }, [el('input', { type: f.papel === 'onboarder' ? 'radio' : 'checkbox', name: prefixo + '-seg', value: sg, checked: f.segmentos.indexOf(sg) >= 0, onchange: function (e) {
+        if (f.papel === 'onboarder') f.segmentos = [sg];
+        else if (e.target.checked) f.segmentos = ORDEM.filter(function (x) { return x === sg || f.segmentos.indexOf(x) >= 0; });
+        else f.segmentos = f.segmentos.filter(function (x) { return x !== sg; });
+        desenhar();
+      } }), sg]);
+    }))),
+    el('fieldset', {}, [el('legend', { text: 'Permissões' }), el('label', { class: 'check' }, [
+      el('input', { type: 'checkbox', checked: f.admin, disabled: adminTravado ? true : null, onchange: function (e) { f.admin = e.target.checked; } }),
+      adminTravado ? 'Admin (você não pode tirar o seu)' : 'Admin'])])
+  ];
+}
+
+/** Edição de um usuário: aparece no lugar do cadastro quando você clica em Editar. */
+function formEditarUsuario(u) {
+  var f = UI.editando;
+  var eu = u.email === S.eu.email;
+  var perfilMudou = f.papel !== u.papel || f.segmentos.join(',') !== u.segmentos.join(',');
+  var clientesFora = S.clientes.filter(function (c) {
+    return c.responsavelEmail === u.email && (f.papel !== 'onboarder' || f.segmentos.indexOf(c.segmento) < 0);
+  }).length;
+  var meusClientes = S.clientes.filter(function (c) { return c.responsavelEmail === u.email; }).length;
+  function fechar() { UI.editando = null; desenhar(); }
+  return el('form', { class: 'form panel', id: 'editar-usuario', onsubmit: function (e) {
+    e.preventDefault();
+    agir(chamar('apiEditarUsuario', u.email, { nome: f.nome, papel: f.papel, segmentos: f.segmentos, admin: f.admin }), 'Dados de ' + f.nome + ' salvos.')
+      .then(function (ok) { if (ok) fechar(); });
+  } }, [
+    el('h2', { class: 'h2 full', text: 'Editar ' + u.nome }),
+    el('div', { class: 'field' }, [el('label', { for: 'e-nome', text: 'Nome (igual ao do Salesforce)' }), el('input', { id: 'e-nome', class: 'input', required: true, value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
+    el('div', { class: 'field' }, [el('label', { text: 'E-mail' }), el('p', { class: 'muted', style: 'min-height:44px;display:flex;align-items:center;margin:0', text: u.email + ' (não muda: para trocar, remova e cadastre de novo)' })])
+  ].concat(camposPerfil(f, 'e', eu)).concat([
+    perfilMudou && !eu ? el('p', { class: 'notice full', text: 'Com o perfil novo, ' + u.nome.split(' ')[0] + ' vai confirmar papel e segmentação no próximo acesso.' }) : null,
+    clientesFora ? el('p', { class: 'warn full', text: (clientesFora === 1 ? '1 cliente de ' + u.nome.split(' ')[0] + ' vai' : clientesFora + ' clientes de ' + u.nome.split(' ')[0] + ' vão') +
+      ' ficar sem responsável válido. Depois de salvar, escolha outro responsável em Clientes.' }) : null,
+    el('div', { class: 'full actions' }, [
+      el('button', { class: 'btn btn-primary', type: 'submit', text: 'Salvar' }),
+      el('button', { class: 'btn btn-secondary', type: 'button', text: 'Cancelar', onclick: fechar }),
+      eu ? null : f.confirmarRemocao
+        ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Sim, remover o acesso de ' + u.nome.split(' ')[0], onclick: function () {
+            agir(chamar('apiRemoverUsuario', u.email), u.nome + ' não tem mais acesso.').then(function (ok) { if (ok) fechar(); });
+          } })
+        : el('button', { class: 'btn btn-secondary', type: 'button', text: 'Remover acesso…', onclick: function () { f.confirmarRemocao = true; desenhar(); } })
+    ]),
+    f.confirmarRemocao && !eu ? el('p', { class: 'warn full', text: u.nome + ' deixa de entrar no app.' + (meusClientes ? ' ' + plural(meusClientes, 'cliente fica', 'clientes ficam') + ' sem responsável para você reatribuir.' : '') }) : null
+  ]));
+}
+
 function paginaUsuarios() {
   var f = UI.novo || (UI.novo = { nome: '', email: '', papel: 'onboarder', segmentos: [], admin: false });
+  var editado = UI.editando ? S.usuarios.filter(function (u) { return u.email === UI.editando.email; })[0] : null;
+  if (UI.editando && !editado) UI.editando = null;
   return el('main', { class: 'page' }, [
     el('div', { class: 'stack' }, [
       el('p', { class: 'kicker', text: 'Admin' }),
       el('h1', { class: 'title', text: 'Usuários' }),
-      el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha.' }),
+      el('p', { class: 'lead', text: 'Quem você cadastra aqui entra com a conta Google da empresa, já com papel e segmentação. Não há senha. Para mudar o perfil de alguém, clique em Editar.' }),
       S.planilhaUrl ? el('p', {}, [el('a', { href: S.planilhaUrl, target: '_blank', rel: 'noopener', text: 'Abrir a planilha →' })]) : null,
       S.eu.admin ? el('p', { class: 'muted', text: 'Versão do código: ' + (S.versao || 'arquivos separados') }) : null
     ]),
-    el('form', { class: 'form panel', onsubmit: function (e) {
+    editado ? formEditarUsuario(editado) : el('form', { class: 'form panel', onsubmit: function (e) {
       e.preventDefault();
       agir(chamar('apiCriarUsuario', f), f.nome + ' foi cadastrado. Mande o link do app para a pessoa.').then(function (ok) {
         if (ok) { UI.novo = null; desenhar(); }
       });
     } }, [
-      el('div', { class: 'field' }, [el('label', { for: 'u-nome', text: 'Nome' }), el('input', { id: 'u-nome', class: 'input', required: true, value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
-      el('div', { class: 'field' }, [el('label', { for: 'u-email', text: 'E-mail (conta Google da empresa)' }), el('input', { id: 'u-email', class: 'input', type: 'email', required: true, value: f.email, oninput: function (e) { f.email = e.target.value; } })]),
-      el('fieldset', {}, [el('legend', { text: 'Papel' })].concat(['onboarder', 'lideranca'].map(function (p) {
-        return el('label', { class: 'check' }, [el('input', { type: 'radio', name: 'u-papel', value: p, checked: f.papel === p, onchange: function () { f.papel = p; if (p === 'onboarder') f.segmentos = f.segmentos.slice(0, 1); desenhar(); } }), PAPEIS[p]]);
-      }))),
-      el('fieldset', {}, [el('legend', { text: f.papel === 'onboarder' ? 'Segmentação (uma)' : 'Segmentações' })].concat(ORDEM.map(function (s) {
-        return el('label', { class: 'check' }, [el('input', { type: f.papel === 'onboarder' ? 'radio' : 'checkbox', name: 'u-seg', value: s, checked: f.segmentos.indexOf(s) >= 0, onchange: function (e) {
-          if (f.papel === 'onboarder') f.segmentos = [s];
-          else if (e.target.checked) f.segmentos = ORDEM.filter(function (x) { return x === s || f.segmentos.indexOf(x) >= 0; });
-          else f.segmentos = f.segmentos.filter(function (x) { return x !== s; });
-        } }), s]);
-      }))),
-      el('fieldset', {}, [el('legend', { text: 'Permissões' }), el('label', { class: 'check' }, [el('input', { type: 'checkbox', checked: f.admin, onchange: function (e) { f.admin = e.target.checked; } }), 'Admin'])]),
+      el('h2', { class: 'h2 full', text: 'Cadastrar pessoa' }),
+      el('div', { class: 'field' }, [el('label', { for: 'u-nome', text: 'Nome (igual ao do Salesforce)' }), el('input', { id: 'u-nome', class: 'input', required: true, value: f.nome, oninput: function (e) { f.nome = e.target.value; } })]),
+      el('div', { class: 'field' }, [el('label', { for: 'u-email', text: 'E-mail (conta Google da empresa)' }), el('input', { id: 'u-email', class: 'input', type: 'email', required: true, value: f.email, oninput: function (e) { f.email = e.target.value; } })])
+    ].concat(camposPerfil(f, 'u', false)).concat([
       el('div', { class: 'full actions' }, [el('button', { class: 'btn btn-primary', type: 'submit', text: 'Cadastrar' })])
-    ]),
+    ])),
     el('section', { class: 'stack' }, [
       el('h2', { class: 'h2', text: 'Todos (' + S.usuarios.length + ')' }),
       el('div', { class: 'table-wrap' }, [el('table', {}, [
-        el('thead', {}, [el('tr', {}, ['Nome', 'Papel', 'Segmentação', 'Liberado por', 'Status'].map(function (h) { return el('th', { text: h }); }))]),
+        el('thead', {}, [el('tr', {}, ['Nome', 'Papel', 'Segmentação', 'Liberado por', 'Status', ''].map(function (h) { return el('th', { text: h }); }))]),
         el('tbody', {}, S.usuarios.map(function (u) {
           return el('tr', {}, [
             el('td', {}, [el('strong', { text: u.nome }), el('div', { class: 'muted', text: u.email })]),
             el('td', { text: PAPEIS[u.papel] + (u.admin ? ' · Admin' : '') }),
             el('td', { text: u.segmentos.join(' + ') }),
             el('td', { class: 'muted', text: nome(u.liberadoPor) }),
-            el('td', { class: 'status', text: u.confirmadoEm ? 'Ativo' : 'Ainda não entrou' })
+            el('td', { class: 'status', text: u.confirmadoEm ? 'Ativo' : 'Ainda não entrou' }),
+            el('td', {}, [el('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'aria-label': 'Editar ' + u.nome, text: 'Editar', onclick: function () {
+              UI.editando = { email: u.email, nome: u.nome, papel: u.papel, segmentos: u.segmentos.slice(), admin: !!u.admin };
+              desenhar();
+              var form = document.getElementById('editar-usuario');
+              if (form) { form.scrollIntoView({ block: 'start' }); document.getElementById('e-nome').focus({ preventScroll: true }); }
+            } })])
           ]);
         }))
       ])])

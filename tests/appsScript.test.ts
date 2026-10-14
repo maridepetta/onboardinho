@@ -553,3 +553,53 @@ test("relatório com título acima do cabeçalho e rodapé do Salesforce: acha o
   // Sem cabeçalho nenhum: a mensagem mostra o que veio na primeira linha.
   assert.throws(() => app.apiPreverImportacao("Acme\t123\nBeta\t456", {}), /A primeira linha tem: "Acme \| 123"/);
 });
+
+test("editar usuário: só admin; regras de segmento; perfil novo pede confirmação; ninguém se tranca fora", () => {
+  const { app, como } = cenario();
+  como("onb7@empresa.com");
+  app.apiConfirmarAcesso();
+  como("lider@empresa.com");
+  assert.throws(() => app.apiEditarUsuario("onb7@empresa.com", { nome: "X", papel: "onboarder", segmentos: ["7D"] }), /Só admin/);
+  como(DONA);
+  assert.throws(() => app.apiEditarUsuario("onb7@empresa.com", { nome: "Marina", papel: "onboarder", segmentos: ["6D", "7D"] }), /uma segmentação/);
+  assert.throws(() => app.apiEditarUsuario("ninguem@empresa.com", { nome: "X", papel: "onboarder", segmentos: ["7D"] }), /não encontrado/);
+  // Só o nome: continua confirmado.
+  let e = app.apiEditarUsuario("onb7@empresa.com", { nome: "Marina C. Costa", papel: "onboarder", segmentos: ["7D"] });
+  let m = e.usuarios.find((u: { email: string }) => u.email === "onb7@empresa.com");
+  assert.equal(m.nome, "Marina C. Costa");
+  assert.ok(m.confirmadoEm);
+  // Mudou de segmento: confirma de novo no próximo acesso; clientes antigos viram aviso.
+  e = app.apiEditarUsuario("onb7@empresa.com", { nome: "Marina C. Costa", papel: "onboarder", segmentos: ["8D"] });
+  m = e.usuarios.find((u: { email: string }) => u.email === "onb7@empresa.com");
+  assert.deepEqual(m.segmentos, ["8D"]);
+  assert.equal(m.confirmadoEm, "");
+  assert.equal(m.liberadoPor, DONA);
+  assert.ok(e.avisosClientes.some((a: string) => a.includes("Lumen Saúde")));
+  como("onb7@empresa.com");
+  assert.equal(app.apiEstado().tela, "primeiro-acesso");
+  como(DONA);
+  // Promover a liderança com vários segmentos e admin.
+  e = app.apiEditarUsuario("onb8@empresa.com", { nome: "Rafael Lima", papel: "lideranca", segmentos: ["7D", "8D"], admin: true });
+  m = e.usuarios.find((u: { email: string }) => u.email === "onb8@empresa.com");
+  assert.equal(m.papel, "lideranca");
+  assert.equal(m.admin, true);
+  // Ninguém tira o próprio admin.
+  assert.throws(() => app.apiEditarUsuario(DONA, { nome: "Dona", papel: "lideranca", segmentos: ["6D"], admin: false }), /próprio acesso de admin/);
+  app.apiEditarUsuario(DONA, { nome: "Dona", papel: "lideranca", segmentos: ["6D"], admin: true });
+  assert.equal(app.apiEstado().tela, "app"); // editar o próprio perfil não tranca a admin na confirmação
+});
+
+test("remover usuário: só admin, nunca a si mesma; os clientes dela ficam para reatribuir", () => {
+  const { app, como } = cenario();
+  como("lider@empresa.com");
+  assert.throws(() => app.apiRemoverUsuario("onb8@empresa.com"), /Só admin/);
+  como(DONA);
+  assert.throws(() => app.apiRemoverUsuario(DONA), /próprio acesso/);
+  const e = app.apiRemoverUsuario("onb8@empresa.com");
+  assert.ok(!e.usuarios.some((u: { email: string }) => u.email === "onb8@empresa.com"));
+  assert.equal(e.usuarios.length, 3);
+  const orbita = e.clientes.find((c: { id: string }) => c.id === "AB-3");
+  assert.equal(orbita.semDono, true);
+  como("onb8@empresa.com");
+  assert.equal(app.apiEstado().tela, "sem-acesso");
+});
