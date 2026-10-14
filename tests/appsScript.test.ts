@@ -501,8 +501,33 @@ test("Index.html colado pela metade: o servidor avisa em vez de página em branc
     const fakes = createGoogleFakes({ owner: DONA, email: DONA, indexHtml: conteudo });
     const ctx = vm.createContext({ ...fakes.services });
     GS.forEach((code) => vm.runInContext(code, ctx));
-    const pagina = (ctx as Record<string, () => { tipo: string; getContent: () => string }>).doGet();
+    const pagina = (ctx as Record<string, (e?: unknown) => { tipo: string; getContent: () => string }>).doGet({ parameter: {} });
     assert.equal(pagina.tipo, esperado);
     if (esperado === "aviso") assert.match(pagina.getContent(), /Index.html está incompleto/);
   }
+});
+
+test("diagnóstico (?diagnostico): mostra versão, se o Index está inteiro e se o servidor responde; detalhes só para admin", () => {
+  const index = readFileSync(join(__dirname, "..", "apps-script", "Index.html"), "utf8");
+  const fakes = createGoogleFakes({ owner: DONA, email: DONA, indexHtml: index.slice(0, 5000) });
+  const ctx = vm.createContext({ ...fakes.services });
+  GS.forEach((code) => vm.runInContext(code, ctx));
+  const doGet = (ctx as Record<string, (e: unknown) => { getContent: () => string }>).doGet;
+  (ctx as Record<string, () => void>).configurar();
+  const html = doGet({ parameter: { diagnostico: "" } }).getContent();
+  assert.match(html, /termina em &lt;\/html&gt;/);
+  assert.match(html, /NÃO: foi colado pela metade/);
+  assert.match(html, /Servidor \(apiEstado\)[\s\S]*responde: tela &quot;app&quot;/);
+  fakes.setEmail("estranho@empresa.com");
+  const outro = doGet({ parameter: { diagnostico: "" } }).getContent();
+  assert.match(outro, /só para o admin/);
+  assert.doesNotMatch(outro, /Versão do código/);
+});
+
+test("o servidor aceita o Index.html da versão estável (sem a marca de fim)", () => {
+  const estavel = readFileSync(join(__dirname, "..", "apps-script", "versao-estavel", "Index.html"), "utf8");
+  const fakes = createGoogleFakes({ owner: DONA, email: DONA, indexHtml: estavel });
+  const ctx = vm.createContext({ ...fakes.services });
+  GS.forEach((code) => vm.runInContext(code, ctx));
+  assert.equal((ctx as Record<string, (e: unknown) => { tipo: string }>).doGet({ parameter: {} }).tipo, "index");
 });

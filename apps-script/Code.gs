@@ -8,21 +8,67 @@
  *  3. devolve o "estado" já filtrado para essa pessoa.
  */
 
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.diagnostico !== undefined) return paginaDiagnostico_();
   var pagina = HtmlService.createHtmlOutputFromFile('Index');
   // Index.html colado pela metade deixa a página em branco, sem erro nenhum. Avisa em vez disso.
-  if (pagina.getContent().indexOf('FIM DO INDEX') < 0) {
+  if (!indexCompleto_(pagina.getContent())) {
     return HtmlService.createHtmlOutput(
       '<div style="max-width:640px;margin:48px auto;font:16px/1.5 system-ui,sans-serif;color:#201e1d">' +
       '<h1 style="font-size:24px">O arquivo Index.html está incompleto.</h1>' +
       '<p>Ele foi colado pela metade no editor do Apps Script. Cole de novo o Index.html inteiro, ' +
-      'role até o fim e confira se as últimas linhas são <code>&lt;!-- FIM DO INDEX ... --&gt;</code>, ' +
-      '<code>&lt;/body&gt;</code> e <code>&lt;/html&gt;</code>. Salve e recarregue esta página.</p></div>'
+      'role até o fim e confira se a última linha é <code>&lt;/html&gt;</code>. Salve e recarregue esta página.</p></div>'
     ).setTitle('Onboardinho: instalação incompleta');
   }
   return pagina
     .setTitle('Onboardinho')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function indexCompleto_(conteudo) {
+  return /<\/html>\s*$/i.test(conteudo);
+}
+
+function escaparHtml_(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Link do app com ?diagnostico no fim: mostra o que está instalado (versão, se o Index.html está
+ * inteiro) e se o servidor responde. Sem JavaScript, para funcionar mesmo quando a tela fica em branco.
+ * Detalhes só para o admin.
+ */
+function paginaDiagnostico_() {
+  var linhas = [];
+  function item(rotulo, valor, ok) {
+    linhas.push('<tr><th style="text-align:left;padding:6px 16px 6px 0;vertical-align:top">' + escaparHtml_(rotulo) +
+      '</th><td style="padding:6px 0">' + (ok === false ? '❌ ' : ok === true ? '✅ ' : '') + escaparHtml_(valor) + '</td></tr>');
+  }
+  var eu = null;
+  try { eu = usuarioAtual_(); } catch (err) { item('Usuários', 'erro ao ler: ' + err.message, false); }
+  item('Sua conta', emailAtual_() || '(não identificada)', !!emailAtual_());
+  if (!eu || !eu.admin) {
+    item('Acesso', 'o diagnóstico completo é só para o admin', eu ? null : false);
+  } else {
+    item('Versão do código', typeof VERSAO_ONBOARDINHO === 'undefined' ? 'arquivos separados (sem versão)' : VERSAO_ONBOARDINHO);
+    try {
+      var index = HtmlService.createHtmlOutputFromFile('Index').getContent();
+      item('Index.html', index.split('\n').length + ' linhas, ' + index.length + ' caracteres', null);
+      item('Index.html termina em </html>', indexCompleto_(index) ? 'sim' : 'NÃO: foi colado pela metade', indexCompleto_(index));
+      item('Index.html é a versão nova', index.indexOf('FIM DO INDEX') >= 0 ? 'sim' : 'não (é uma versão anterior)', null);
+      item('Final do Index.html', '…' + index.slice(-120), null);
+    } catch (err) { item('Index.html', 'erro: ' + err.message, false); }
+    try {
+      var estado = apiEstado();
+      item('Servidor (apiEstado)', 'responde: tela "' + estado.tela + '", ' + (estado.clientes ? estado.clientes.length : 0) + ' clientes', true);
+    } catch (err) { item('Servidor (apiEstado)', 'ERRO: ' + err.message + (err.stack ? '\n' + err.stack : ''), false); }
+  }
+  return HtmlService.createHtmlOutput(
+    '<div style="max-width:760px;margin:40px auto;font:15px/1.5 system-ui,sans-serif;color:#201e1d">' +
+    '<h1 style="font-size:24px">Onboardinho: diagnóstico</h1>' +
+    '<table style="border-collapse:collapse;white-space:pre-wrap">' + linhas.join('') + '</table>' +
+    '<p style="color:#605d5d">Tire um print desta página e mande para quem cuida do app.</p></div>'
+  ).setTitle('Onboardinho: diagnóstico');
 }
 
 // ---------- Identidade ----------

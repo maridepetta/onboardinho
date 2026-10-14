@@ -29,7 +29,7 @@
     caixa.appendChild(p);
   }
   var DICA = 'Provável causa: o Index.html foi colado pela metade. No editor do Apps Script, cole o Index.html de novo, ' +
-    'role até o fim e confira se a última linha é </html>. Salve e recarregue esta página.';
+    'role até o fim e confira se a última linha é </' + 'html>. Salve e recarregue esta página.';
   window.addEventListener('error', function (ev) {
     var msg = (ev && ev.message) || 'erro desconhecido';
     var incompleto = /end of input|Unexpected end|unterminated/i.test(msg);
